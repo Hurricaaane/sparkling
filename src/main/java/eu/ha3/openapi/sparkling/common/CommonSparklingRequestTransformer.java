@@ -1,8 +1,8 @@
-package eu.ha3.openapi.sparkling.specific;
+package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
-import eu.ha3.openapi.sparkling.routing.ISparkConsumer;
+import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  *
  * @author Ha3
  */
-public enum CommonSparkConsumer implements ISparkConsumer {
+public enum CommonSparklingRequestTransformer implements ISparklingRequestTransformer {
     FORM_URL_ENCODED {
         @Override
         public List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer) {

@@ -3,7 +3,7 @@ package eu.ha3.openapi.sparkling;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
-import eu.ha3.openapi.sparkling.specific.CommonSparklingParser;
+import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ class CommonSparklingParserTest {
     }
     private static class NoSparklingInteractor implements ISparklingInteractor {
         @Override
-        public void declare(String tag, String operationId, SparklingVerb post, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
+        public void newRoute(String tag, String operationId, SparklingVerb post, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
 
         }
     }

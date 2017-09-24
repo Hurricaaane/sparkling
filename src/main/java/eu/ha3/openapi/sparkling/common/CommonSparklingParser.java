@@ -1,4 +1,4 @@
-package eu.ha3.openapi.sparkling.specific;
+package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 public class CommonSparklingParser {
     private static final Pattern SPEC_PATH_TEMPLATING = Pattern.compile("\\{(.*?)\\}");
     private final String openApi;
-    private final ISparklingInteractor spark;
+    private final ISparklingInteractor sparkling;
 
     public static void apply(InputStream openApi, ISparklingInteractor spark) {
         try {
@@ -47,9 +47,9 @@ public class CommonSparklingParser {
         }
     }
 
-    public CommonSparklingParser(String openApi, ISparklingInteractor spark) {
+    public CommonSparklingParser(String openApi, ISparklingInteractor sparkling) {
         this.openApi = openApi;
-        this.spark = spark;
+        this.sparkling = sparkling;
     }
 
     private void parsing() {
@@ -110,27 +110,28 @@ public class CommonSparklingParser {
             if (consumes == null) {
                 consumes = Arrays.asList("application/json");
             }
+
             switch (method) {
                 case POST:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.POST, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.POST, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case GET:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.GET, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.GET, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case PUT:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.PUT, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.PUT, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case PATCH:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.PATCH, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.PATCH, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case DELETE:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.DELETE, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.DELETE, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case HEAD:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.HEAD, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.HEAD, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
                 case OPTIONS:
-                    spark.declare(controllerHint, operation.getOperationId(), SparklingVerb.OPTIONS, sparkPath, consumes, operation.getProduces(), parameters);
+                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.OPTIONS, sparkPath, consumes, operation.getProduces(), parameters);
                     break;
             }
         }

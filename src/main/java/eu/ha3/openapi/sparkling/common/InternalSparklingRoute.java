@@ -1,8 +1,8 @@
-package eu.ha3.openapi.sparkling.specific;
+package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparkConsumer;
+import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
@@ -27,11 +27,11 @@ import java.util.stream.Collectors;
  */
 class InternalSparklingRoute implements Route {
     private final Function<Object[], SparklingResponseContext> implementation;
-    private final List<ISparkConsumer> availableConsumers;
+    private final List<ISparklingRequestTransformer> availableConsumers;
     private final List<SparklingParameter> parameters;
     private final ISparklingDeserializer deserializer;
 
-    public InternalSparklingRoute(Function<Object[], SparklingResponseContext> implementation, List<ISparkConsumer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer) {
+    public InternalSparklingRoute(Function<Object[], SparklingResponseContext> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer) {
         this.implementation = implementation;
         this.availableConsumers = availableConsumers;
         this.parameters = parameters;
@@ -41,7 +41,7 @@ class InternalSparklingRoute implements Route {
     @Override
     public Object handle(Request request, Response response) throws Exception {
         String contentType = request.contentType();
-        ISparkConsumer consumer = getMatchingConsumer(contentType);
+        ISparklingRequestTransformer consumer = getMatchingConsumer(contentType);
 
         List<Object> extractedParameters = extractParameters(request, consumer);
 
@@ -68,7 +68,7 @@ class InternalSparklingRoute implements Route {
         return sparklingResponseContext.getEntity();
     }
 
-    private List<Object> extractParameters(Request request, ISparkConsumer consumer) {
+    private List<Object> extractParameters(Request request, ISparklingRequestTransformer consumer) {
         List<Object> extractedParameters = new ArrayList<>();
         extractedParameters.add(request);
 
@@ -141,12 +141,12 @@ class InternalSparklingRoute implements Route {
         return item;
     }
 
-    private ISparkConsumer getMatchingConsumer(String contentType) {
+    private ISparklingRequestTransformer getMatchingConsumer(String contentType) {
         return availableConsumers.stream()
                 .filter(availableConsumer -> availableConsumer.getApplicableContentTypes().contains(contentType))
                 .findFirst()
                 // FIXME: Handle non consumable requests
 //              .orElseThrow(() -> new ApiSparklingException(ApiSparklingCode.NOT_ACCEPTABLE));
-                .orElse(CommonSparkConsumer.APPLICATION_JSON);
+                .orElse(CommonSparklingRequestTransformer.APPLICATION_JSON);
     }
 }

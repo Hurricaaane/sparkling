@@ -1,8 +1,8 @@
-package eu.ha3.openapi.sparkling.specific;
+package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparkConsumer;
+import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
@@ -26,11 +26,11 @@ import java.util.stream.Collectors;
  */
 public class CommonSparklingInteractor implements ISparklingInteractor {
     private final Service http;
-    private final List<? extends ISparkConsumer> availableConsumers;
+    private final List<? extends ISparklingRequestTransformer> availableConsumers;
     private final ISparklingDeserializer deserializer;
     private final List<?> controllers;
 
-    public CommonSparklingInteractor(Service http, List<? extends ISparkConsumer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
+    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
         this.http = http;
         this.availableConsumers = availableConsumers;
         this.deserializer = deserializer;
@@ -38,9 +38,9 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
     }
 
     @Override
-    public void declare(String controllerHint, String operationId, SparklingVerb method, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
+    public void newRoute(String controllerHint, String operationId, SparklingVerb method, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
         Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint);
-        List<ISparkConsumer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
+        List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
 
         switch (method) {
             case GET:
@@ -70,7 +70,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         }
     }
 
-    private List<ISparkConsumer> findAvailableConsumersApplicableForThisDeclaration(List<String> consumes) {
+    private List<ISparklingRequestTransformer> findAvailableConsumersApplicableForThisDeclaration(List<String> consumes) {
         return availableConsumers.stream()
                 .filter(sparkConsumer -> consumes.stream().anyMatch(declaredConsumer -> sparkConsumer.getApplicableContentTypes().contains(declaredConsumer)))
                 .collect(Collectors.toList());

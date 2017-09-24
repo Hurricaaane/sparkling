@@ -1,9 +1,9 @@
 package eu.ha3.openapi.sparkling;
 
-import eu.ha3.openapi.sparkling.specific.CommonDeserializer;
-import eu.ha3.openapi.sparkling.specific.CommonSparkConsumer;
-import eu.ha3.openapi.sparkling.specific.CommonSparklingInteractor;
-import eu.ha3.openapi.sparkling.specific.CommonSparklingParser;
+import eu.ha3.openapi.sparkling.common.CommonDeserializer;
+import eu.ha3.openapi.sparkling.common.CommonSparklingRequestTransformer;
+import eu.ha3.openapi.sparkling.common.CommonSparklingInteractor;
+import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
 import org.junit.jupiter.api.Disabled;
 import spark.Service;
 
@@ -34,8 +34,8 @@ public class Experimenting implements Runnable {
     @Override
     public void run(){
         Service http = Service.ignite();
-        EnumSet<CommonSparkConsumer> commonSparkConsumers = EnumSet.allOf(CommonSparkConsumer.class);
-        ArrayList<CommonSparkConsumer> consumers = new ArrayList<>(commonSparkConsumers);
+        EnumSet<CommonSparklingRequestTransformer> commonSparkConsumers = EnumSet.allOf(CommonSparklingRequestTransformer.class);
+        ArrayList<CommonSparklingRequestTransformer> consumers = new ArrayList<>(commonSparkConsumers);
         CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), Arrays.asList(new StoreController()));
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {

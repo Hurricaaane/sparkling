@@ -12,5 +12,5 @@ import java.util.List;
  * @author Ha3
  */
 public interface ISparklingInteractor {
-    void declare(String tag, String operationId, SparklingVerb post, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters);
+    void newRoute(String tag, String operationId, SparklingVerb post, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters);
 }

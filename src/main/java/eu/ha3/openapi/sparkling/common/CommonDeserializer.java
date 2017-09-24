@@ -1,4 +1,4 @@
-package eu.ha3.openapi.sparkling.specific;
+package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
