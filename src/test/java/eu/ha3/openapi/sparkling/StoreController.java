@@ -8,7 +8,7 @@ import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
  *
  * @author Ha3
  */
-class StoreController {
+public class StoreController {
     public SparklingResponseContext getOrderById(long orderId) {
         return new SparklingResponseContext().status(200).entity("hello " + orderId);
     }

@@ -4,6 +4,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.Map;
 
 /**
  * (Default template)
@@ -29,7 +31,12 @@ public class SparklingResponseContext {
     }
 
     public SparklingResponseContext header(String key, String value) {
-        MultivaluedHashMap<String, String> newMap = new MultivaluedHashMap<>(headers);
+        // FIXME: Ambiguous constructor when passing the map as an argument
+        MultivaluedHashMap<String, String> newMap = new MultivaluedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+            newMap.addAll(entry.getKey(), entry.getValue());
+        }
+
         newMap.add(key, value);
         return new SparklingResponseContext(newMap, contentType, status, entity);
     }

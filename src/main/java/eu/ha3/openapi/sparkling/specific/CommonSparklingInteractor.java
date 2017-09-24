@@ -105,7 +105,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
             return (SparklingResponseContext) method.invoke(controller, items);
 
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId);
+            throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);
         }
     }
 

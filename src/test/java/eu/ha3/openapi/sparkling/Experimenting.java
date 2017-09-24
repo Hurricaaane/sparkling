@@ -31,7 +31,7 @@ import java.util.List;
 @Disabled
 public class Experimenting {
     @Test
-    void name() throws IOException {
+    void experimenting() throws IOException {
         Service http = Service.ignite();
         EnumSet<CommonSparkConsumer> commonSparkConsumers = EnumSet.allOf(CommonSparkConsumer.class);
         ArrayList<CommonSparkConsumer> consumers = new ArrayList<>(commonSparkConsumers);
