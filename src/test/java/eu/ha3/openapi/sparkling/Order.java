@@ -1,4 +1,4 @@
-package eu.ha3.openapi.sparkling.vo;
+package eu.ha3.openapi.sparkling;
 
 import java.time.OffsetDateTime;
 
@@ -9,12 +9,12 @@ import java.time.OffsetDateTime;
  * @author Ha3
  */
 public class Order {
-    long id;
-    long petId;
-    int quantity;
-    OffsetDateTime shipDate;
-    String status;
-    boolean complete;
+    public long id;
+    public long petId;
+    public int quantity;
+    public OffsetDateTime shipDate;
+    public String status;
+    public boolean complete;
 
     @Override
     public String toString() {

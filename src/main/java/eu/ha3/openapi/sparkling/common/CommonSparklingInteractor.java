@@ -3,7 +3,6 @@ package eu.ha3.openapi.sparkling.common;
 import eu.ha3.openapi.sparkling.enums.ParameterLocation;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingJsonTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
@@ -31,14 +30,12 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
     private final List<? extends ISparklingRequestTransformer> availableConsumers;
     private final ISparklingDeserializer deserializer;
     private final List<?> controllers;
-    private final ISparklingJsonTransformer json;
 
-    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers, ISparklingJsonTransformer json) {
+    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
         this.http = http;
         this.availableConsumers = availableConsumers;
         this.deserializer = deserializer;
         this.controllers = controllers;
-        this.json = json;
     }
 
     @Override
@@ -49,11 +46,10 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .map(parameters::indexOf)
                 .orElse(-1);
 
-        // FIXME: Find a way to extract the body runtime class here, so that we can pass it as an argument to the route as a POJO deserialization hint
-        Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint, bodyLocation);
+        ReflectedMethodDescriptor descriptor = resolveControllerImplementation(operationId, controllerHint, bodyLocation);
         List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
 
-        InternalSparklingRoute route = new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer);
+        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getImplementation(), allowedConsumers, parameters, deserializer, descriptor.getPojoClass());
         addRouteToSpark(method, sparkPath, route);
     }
 
@@ -92,32 +88,37 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .collect(Collectors.toList());
     }
 
-    private Function<Object[], SparklingResponseContext> resolveControllerImplementation(String operationId, String controllerHint, int bodyParameterIndex) {
+    private ReflectedMethodDescriptor resolveControllerImplementation(String operationId, String controllerHint, int bodyParameterIndex) {
         Object controller = resolveController(controllerHint);
+        Class<?> bodyPojoClass;
 
-        Function<Object[], SparklingResponseContext> reflector;
+        Function<Object[], SparklingResponseContext> implementation;
         if (controller != null) {
-            reflector = resolveMatchingMethodByName(operationId, controller)
-                    .<Function<Object[], SparklingResponseContext>>map(method -> {
-                        Class<?> bodyPojoClass;
-                        if (bodyParameterIndex != -1) {
-                            bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + 1];
+            Optional<Method> matchingMethod = resolveMatchingMethodByName(operationId, controller);
+            if (matchingMethod.isPresent()) {
+                Method method = matchingMethod.get();
 
-                        } else {
-                            bodyPojoClass = null;
-                        }
+                implementation = items -> invokeController(operationId, controller, method, items);
+                if (bodyParameterIndex != -1) {
+                    bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + 1];
 
-                        return items -> invokeController(operationId, controller, method, items, bodyParameterIndex, bodyPojoClass);
-                    })
-                    .orElseGet(() -> items -> {
-                        throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId);
-                    });
+                } else {
+                    bodyPojoClass = String.class;
+                }
+
+            } else {
+                implementation = items -> {
+                    throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId);
+                };
+                bodyPojoClass = String.class;
+            }
         } else {
-            reflector = (Object[] items) -> {
+            implementation = (Object[] items) -> {
                 throw new UnavailableControllerSparklingException("No controller available for this operation " + operationId);
             };
+            bodyPojoClass = String.class;
         }
-        return reflector;
+        return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
     }
 
     private Optional<Method> resolveMatchingMethodByName(String operationId, Object controller) {
@@ -126,13 +127,8 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .findFirst();
     }
 
-    private SparklingResponseContext invokeController(String operationId, Object controller, Method method, Object[] items, int bodyParameterIndex, Class<?> bodyPojoClass) {
+    private SparklingResponseContext invokeController(String operationId, Object controller, Method method, Object[] items) {
         try {
-            // FIXME: Handling JSON body in the at the reflection level? maybe resolve the mapped method in the deserializer instead
-            Object jsonString = items[bodyParameterIndex + 1]; // +1 because Request is the injected 0th parameter
-            Object pojo = json.fromJson((String) jsonString, bodyPojoClass);
-            items[bodyParameterIndex + 1] = pojo;
-
             return (SparklingResponseContext) method.invoke(controller, items);
 
         } catch (IllegalAccessException | InvocationTargetException e) {

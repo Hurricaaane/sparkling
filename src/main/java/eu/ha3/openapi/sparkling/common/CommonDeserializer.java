@@ -1,5 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
+import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
@@ -27,6 +28,9 @@ import java.util.stream.Stream;
  * @author Ha3
  */
 public class CommonDeserializer implements ISparklingDeserializer {
+    public CommonDeserializer() {
+    }
+
     @Override
     public List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part) {
         if (type == DeserializeInto.BYTE_STREAM) {
@@ -57,8 +61,8 @@ public class CommonDeserializer implements ISparklingDeserializer {
     }
 
     @Override
-    public <T> T deserializeObject(String body, SparklingParameter parameter, Class<T> target) {
-        return (T) body;
+    public <T> T deserializeSchema(String body, SparklingParameter parameter, Class<T> target) {
+        return new Gson().fromJson(body, target);
     }
 
     private Object deserializeSingleValued(DeserializeInto type, String content) {

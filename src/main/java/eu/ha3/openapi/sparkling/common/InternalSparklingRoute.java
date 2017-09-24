@@ -30,12 +30,14 @@ class InternalSparklingRoute implements Route {
     private final List<ISparklingRequestTransformer> availableConsumers;
     private final List<SparklingParameter> parameters;
     private final ISparklingDeserializer deserializer;
+    private final Class<?> bodyPojoClass;
 
-    public InternalSparklingRoute(Function<Object[], SparklingResponseContext> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer) {
+    public InternalSparklingRoute(Function<Object[], SparklingResponseContext> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
         this.implementation = implementation;
         this.availableConsumers = availableConsumers;
         this.parameters = parameters;
         this.deserializer = deserializer;
+        this.bodyPojoClass = bodyPojoClass;
     }
 
     @Override
@@ -85,10 +87,10 @@ class InternalSparklingRoute implements Route {
                     item = deserializeHeader(request, parameter);
                     break;
                 case BODY:
-                    item = consumer.transform(request, parameter, deserializer);
+                    item = consumer.transform(request, parameter, deserializer, bodyPojoClass);
                     break;
                 case FORM:
-                    item = consumer.transform(request, parameter, deserializer);
+                    item = consumer.transform(request, parameter, deserializer, bodyPojoClass);
                     break;
                 default:
                     throw new TransformationFailedInternalSparklingException("Unknown location");

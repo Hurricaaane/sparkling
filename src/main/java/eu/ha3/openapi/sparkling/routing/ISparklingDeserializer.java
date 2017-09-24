@@ -16,5 +16,5 @@ import java.util.List;
 public interface ISparklingDeserializer {
     List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part);
     List<?> deserializeSimple(DeserializeInto type, ArrayType arrayType, String content);
-    <T> T deserializeObject(String body, SparklingParameter parameter, Class<T> target);
+    <T> T deserializeSchema(String body, SparklingParameter parameter, Class<T> target);
 }

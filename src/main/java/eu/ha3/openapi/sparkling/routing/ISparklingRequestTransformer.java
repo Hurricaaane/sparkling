@@ -14,5 +14,5 @@ import java.util.List;
 public interface ISparklingRequestTransformer {
     List<String> getApplicableContentTypes();
 
-    List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer);
+    List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass);
 }

@@ -1,7 +1,6 @@
 package eu.ha3.openapi.sparkling;
 
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
-import eu.ha3.openapi.sparkling.vo.Order;
 import spark.Request;
 
 /**

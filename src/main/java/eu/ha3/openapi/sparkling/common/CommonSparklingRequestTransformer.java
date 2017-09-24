@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public enum CommonSparklingRequestTransformer implements ISparklingRequestTransformer {
     FORM_URL_ENCODED {
         @Override
-        public List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer) {
+        public List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
             if (parameter.getArrayType() != ArrayType.MULTI) {
                 String[] queryParamsValues = request.queryParamsValues(parameter.getName());
                 if (queryParamsValues != null) {
@@ -56,7 +56,7 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
         private volatile MultipartConfigElement multipartConfig;
 
         @Override
-        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer) {
+        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
             try {
                 if (multipartConfig == null) {
                     resolveMultipartConfig();
@@ -120,8 +120,8 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
     },
     APPLICATION_JSON {
         @Override
-        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer) {
-            return Arrays.asList(deserializer.deserializeObject(request.body(), parameter, Object.class));
+        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+            return Arrays.asList(deserializer.deserializeSchema(request.body(), parameter, bodyPojoClass));
         }
 
         @Override
