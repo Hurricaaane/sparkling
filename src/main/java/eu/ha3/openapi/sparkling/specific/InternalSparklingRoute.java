@@ -70,6 +70,8 @@ class InternalSparklingRoute implements Route {
 
     private List<Object> extractParameters(Request request, ISparkConsumer consumer) {
         List<Object> extractedParameters = new ArrayList<>();
+        extractedParameters.add(request);
+
         for (SparklingParameter parameter : parameters) {
             Object item;
             switch (parameter.getLocation()) {

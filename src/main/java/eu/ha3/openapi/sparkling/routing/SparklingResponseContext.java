@@ -31,14 +31,20 @@ public class SparklingResponseContext {
     }
 
     public SparklingResponseContext header(String key, String value) {
-        // FIXME: Ambiguous constructor when passing the map as an argument
+        MultivaluedHashMap<String, String> newMap = copyMap(headers);
+
+        newMap.add(key, value);
+        return new SparklingResponseContext(newMap, contentType, status, entity);
+    }
+
+    static MultivaluedHashMap<String, String> copyMap(MultivaluedMap<String, String> headers) {
+        // FIXME: Getting compilation error "Ambiguous constructor" when passing the map as an argument
+
         MultivaluedHashMap<String, String> newMap = new MultivaluedHashMap<>();
         for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
             newMap.addAll(entry.getKey(), entry.getValue());
         }
-
-        newMap.add(key, value);
-        return new SparklingResponseContext(newMap, contentType, status, entity);
+        return newMap;
     }
 
     public SparklingResponseContext contentType(MediaType contentType) {

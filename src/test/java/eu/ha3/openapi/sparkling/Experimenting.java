@@ -1,17 +1,15 @@
 package eu.ha3.openapi.sparkling;
 
-import eu.ha3.openapi.sparkling.enums.ArrayType;
-import eu.ha3.openapi.sparkling.enums.DeserializeInto;
-import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.specific.CommonDeserializer;
 import eu.ha3.openapi.sparkling.specific.CommonSparkConsumer;
 import eu.ha3.openapi.sparkling.specific.CommonSparklingInteractor;
 import eu.ha3.openapi.sparkling.specific.CommonSparklingParser;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 import spark.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -20,7 +18,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.List;
 
 /**
  * (Default template)
@@ -29,41 +26,24 @@ import java.util.List;
  * @author Ha3
  */
 @Disabled
-public class Experimenting {
-    @Test
-    void experimenting() throws IOException {
+public class Experimenting implements Runnable {
+    public static void main(String[] args) {
+        new Experimenting().run();
+    }
+
+    @Override
+    public void run(){
         Service http = Service.ignite();
         EnumSet<CommonSparkConsumer> commonSparkConsumers = EnumSet.allOf(CommonSparkConsumer.class);
         ArrayList<CommonSparkConsumer> consumers = new ArrayList<>(commonSparkConsumers);
-        CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new ISparklingDeserializer() {
-            @Override
-            public List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part) {
-                return null;
-            }
-
-            @Override
-            public List<?> deserializeSimple(DeserializeInto type, ArrayType arrayType, String content) {
-                if (type == DeserializeInto.INT) {
-                    return Arrays.asList(Integer.parseInt(content));
-
-                } else if (type == DeserializeInto.LONG) {
-                    return Arrays.asList(Long.parseLong(content));
-
-                }
-                return null;
-            }
-        }, Arrays.asList(new StoreController()));
+        CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), Arrays.asList(new StoreController()));
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
             CommonSparklingParser.apply(openApiStream, spark);
-        }
 
-        try {
-            Thread.sleep(10_000_000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-
     }
 
     private Path pathFromResource(String resource) {

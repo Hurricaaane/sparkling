@@ -1,6 +1,7 @@
 package eu.ha3.openapi.sparkling;
 
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
+import spark.Request;
 
 /**
  * (Default template)
@@ -9,7 +10,7 @@ import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
  * @author Ha3
  */
 public class StoreController {
-    public SparklingResponseContext getOrderById(long orderId) {
+    public SparklingResponseContext getOrderById(Request request, long orderId) {
         return new SparklingResponseContext().status(200).entity("hello " + orderId);
     }
 }

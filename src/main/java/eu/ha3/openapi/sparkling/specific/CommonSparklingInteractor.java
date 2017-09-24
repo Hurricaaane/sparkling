@@ -39,33 +39,33 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
 
     @Override
     public void declare(String controllerHint, String operationId, SparklingVerb method, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
-        Function<Object[], SparklingResponseContext> reflector = resolveControllerAndMethod(operationId, controllerHint);
+        Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint);
         List<ISparkConsumer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
 
         switch (method) {
             case GET:
-                http.get(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.get(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case POST:
-                http.post(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.post(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case PUT:
-                http.put(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.put(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case PATCH:
-                http.patch(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.patch(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case DELETE:
-                http.delete(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.delete(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case HEAD:
-                http.head(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.head(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case TRACE:
-                http.trace(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.trace(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
             case OPTIONS:
-                http.options(sparkPath, new InternalSparklingRoute(reflector, allowedConsumers, parameters, deserializer));
+                http.options(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
                 break;
         }
     }
@@ -76,7 +76,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .collect(Collectors.toList());
     }
 
-    private Function<Object[], SparklingResponseContext> resolveControllerAndMethod(String operationId, String controllerHint) {
+    private Function<Object[], SparklingResponseContext> resolveControllerImplementation(String operationId, String controllerHint) {
         Object controller = resolveController(controllerHint);
 
         Function<Object[], SparklingResponseContext> reflector;
