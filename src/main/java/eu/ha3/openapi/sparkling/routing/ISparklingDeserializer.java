@@ -2,6 +2,7 @@ package eu.ha3.openapi.sparkling.routing;
 
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
+import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 
 import java.io.InputStream;
 import java.util.List;
@@ -15,4 +16,5 @@ import java.util.List;
 public interface ISparklingDeserializer {
     List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part);
     List<?> deserializeSimple(DeserializeInto type, ArrayType arrayType, String content);
+    <T> T deserializeObject(String body, SparklingParameter parameter, Class<T> target);
 }

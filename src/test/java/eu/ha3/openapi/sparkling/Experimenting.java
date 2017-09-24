@@ -1,9 +1,10 @@
 package eu.ha3.openapi.sparkling;
 
+import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.common.CommonDeserializer;
-import eu.ha3.openapi.sparkling.common.CommonSparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.common.CommonSparklingInteractor;
 import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
+import eu.ha3.openapi.sparkling.common.CommonSparklingRequestTransformer;
 import org.junit.jupiter.api.Disabled;
 import spark.Service;
 
@@ -33,10 +34,12 @@ public class Experimenting implements Runnable {
 
     @Override
     public void run(){
+        Gson gson = new Gson();
+
         Service http = Service.ignite();
         EnumSet<CommonSparklingRequestTransformer> commonSparkConsumers = EnumSet.allOf(CommonSparklingRequestTransformer.class);
         ArrayList<CommonSparklingRequestTransformer> consumers = new ArrayList<>(commonSparkConsumers);
-        CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), Arrays.asList(new StoreController()));
+        CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), Arrays.asList(new StoreController()), gson::fromJson);
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
             CommonSparklingParser.apply(openApiStream, spark);

@@ -4,6 +4,7 @@ import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
@@ -53,6 +54,11 @@ public class CommonDeserializer implements ISparklingDeserializer {
         return handleArrayTypeAsStream(type, arrayType, content)
                 .map(s -> deserializeSingleValued(type, content))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public <T> T deserializeObject(String body, SparklingParameter parameter, Class<T> target) {
+        return (T) body;
     }
 
     private Object deserializeSingleValued(DeserializeInto type, String content) {

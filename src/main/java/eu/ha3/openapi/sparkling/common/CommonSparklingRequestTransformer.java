@@ -121,7 +121,7 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
     APPLICATION_JSON {
         @Override
         public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer) {
-            throw new TransformationFailedInternalSparklingException("Unexpected transformation");
+            return Arrays.asList(deserializer.deserializeObject(request.body(), parameter, Object.class));
         }
 
         @Override

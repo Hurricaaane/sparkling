@@ -1,7 +1,9 @@
 package eu.ha3.openapi.sparkling.common;
 
+import eu.ha3.openapi.sparkling.enums.ParameterLocation;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
+import eu.ha3.openapi.sparkling.routing.ISparklingJsonTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
@@ -29,17 +31,26 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
     private final List<? extends ISparklingRequestTransformer> availableConsumers;
     private final ISparklingDeserializer deserializer;
     private final List<?> controllers;
+    private final ISparklingJsonTransformer json;
 
-    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
+    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers, ISparklingJsonTransformer json) {
         this.http = http;
         this.availableConsumers = availableConsumers;
         this.deserializer = deserializer;
         this.controllers = controllers;
+        this.json = json;
     }
 
     @Override
     public void newRoute(String controllerHint, String operationId, SparklingVerb method, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
-        Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint);
+        int bodyLocation = parameters.stream()
+                .filter(parameter -> parameter.getLocation() == ParameterLocation.BODY)
+                .findFirst()
+                .map(parameters::indexOf)
+                .orElse(-1);
+
+        // FIXME: Find a way to extract the body runtime class here, so that we can pass it as an argument to the route as a POJO deserialization hint
+        Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint, bodyLocation);
         List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
 
         InternalSparklingRoute route = new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer);
@@ -81,13 +92,23 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .collect(Collectors.toList());
     }
 
-    private Function<Object[], SparklingResponseContext> resolveControllerImplementation(String operationId, String controllerHint) {
+    private Function<Object[], SparklingResponseContext> resolveControllerImplementation(String operationId, String controllerHint, int bodyParameterIndex) {
         Object controller = resolveController(controllerHint);
 
         Function<Object[], SparklingResponseContext> reflector;
         if (controller != null) {
             reflector = resolveMatchingMethodByName(operationId, controller)
-                    .<Function<Object[], SparklingResponseContext>>map(method -> items -> invokeController(operationId, controller, method, items))
+                    .<Function<Object[], SparklingResponseContext>>map(method -> {
+                        Class<?> bodyPojoClass;
+                        if (bodyParameterIndex != -1) {
+                            bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + 1];
+
+                        } else {
+                            bodyPojoClass = null;
+                        }
+
+                        return items -> invokeController(operationId, controller, method, items, bodyParameterIndex, bodyPojoClass);
+                    })
                     .orElseGet(() -> items -> {
                         throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId);
                     });
@@ -105,8 +126,13 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .findFirst();
     }
 
-    private SparklingResponseContext invokeController(String operationId, Object controller, Method method, Object[] items) {
+    private SparklingResponseContext invokeController(String operationId, Object controller, Method method, Object[] items, int bodyParameterIndex, Class<?> bodyPojoClass) {
         try {
+            // FIXME: Handling JSON body in the at the reflection level? maybe resolve the mapped method in the deserializer instead
+            Object jsonString = items[bodyParameterIndex + 1]; // +1 because Request is the injected 0th parameter
+            Object pojo = json.fromJson((String) jsonString, bodyPojoClass);
+            items[bodyParameterIndex + 1] = pojo;
+
             return (SparklingResponseContext) method.invoke(controller, items);
 
         } catch (IllegalAccessException | InvocationTargetException e) {
