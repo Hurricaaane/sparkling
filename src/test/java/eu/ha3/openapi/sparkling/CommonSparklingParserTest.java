@@ -1,15 +1,16 @@
 package eu.ha3.openapi.sparkling;
 
+import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
-import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +26,7 @@ class CommonSparklingParserTest {
     @Test
     void creating() throws IOException {
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
-            CommonSparklingParser.apply(openApiStream, new NoSparklingInteractor());
+            CommonSparklingParser.apply(openApiStream, new NoSparklingInteractor(), StandardCharsets.UTF_8);
         }
     }
 

@@ -11,10 +11,11 @@ import io.swagger.models.Swagger;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.SerializableParameter;
 import io.swagger.parser.SwaggerParser;
-import spark.utils.IOUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -37,20 +38,32 @@ public class CommonSparklingParser {
     private final String openApi;
     private final ISparklingInteractor sparkling;
 
-    public static void apply(InputStream openApi, ISparklingInteractor spark) {
+    public static void apply(InputStream openApi, ISparklingInteractor spark, Charset charset) {
         try {
-            // FIXME: Suspicious stream to string encoding
-            CommonSparklingParser commonSparklingParser = new CommonSparklingParser(IOUtils.toString(openApi), spark);
-            commonSparklingParser.parsing();
+            apply(IOUtils.toString(openApi, charset), spark);
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
         }
     }
 
+    public static void apply(String openApi, ISparklingInteractor spark) {
+        CommonSparklingParser commonSparklingParser = new CommonSparklingParser(openApi, spark);
+        commonSparklingParser.parsing();
+    }
+
     public CommonSparklingParser(String openApi, ISparklingInteractor sparkling) {
         this.openApi = openApi;
         this.sparkling = sparkling;
+    }
+
+    public static void applyFile(java.nio.file.Path openApiFile, ISparklingInteractor spark, Charset charset) {
+        try (InputStream inputStream = Files.newInputStream(openApiFile)) {
+            apply(inputStream, spark, charset);
+
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
 
     private void parsing() {

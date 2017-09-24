@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,7 +35,7 @@ public class Experimenting implements Runnable {
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
             http.path("/v2", () -> {
-                CommonSparklingParser.apply(openApiStream, spark);
+                CommonSparklingParser.apply(openApiStream, spark, StandardCharsets.UTF_8);
             });
 
         } catch (IOException e) {
