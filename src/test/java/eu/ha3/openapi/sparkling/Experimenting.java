@@ -1,9 +1,7 @@
 package eu.ha3.openapi.sparkling;
 
-import eu.ha3.openapi.sparkling.common.CommonDeserializer;
 import eu.ha3.openapi.sparkling.common.CommonSparklingInteractor;
 import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
-import eu.ha3.openapi.sparkling.common.CommonSparklingRequestTransformer;
 import org.junit.jupiter.api.Disabled;
 import spark.Service;
 
@@ -15,9 +13,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 
 /**
  * (Default template)
@@ -34,12 +30,12 @@ public class Experimenting implements Runnable {
     @Override
     public void run(){
         Service http = Service.ignite();
-        EnumSet<CommonSparklingRequestTransformer> commonSparkConsumers = EnumSet.allOf(CommonSparklingRequestTransformer.class);
-        ArrayList<CommonSparklingRequestTransformer> consumers = new ArrayList<>(commonSparkConsumers);
-        CommonSparklingInteractor spark = new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), Arrays.asList(new StoreController()));
+        CommonSparklingInteractor spark = CommonSparklingInteractor.generic(http, Arrays.asList(new StoreController()));
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
-            CommonSparklingParser.apply(openApiStream, spark);
+            http.path("/v2", () -> {
+                CommonSparklingParser.apply(openApiStream, spark);
+            });
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);

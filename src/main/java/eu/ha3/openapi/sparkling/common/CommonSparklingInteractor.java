@@ -12,7 +12,9 @@ import spark.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -36,6 +38,11 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         this.availableConsumers = availableConsumers;
         this.deserializer = deserializer;
         this.controllers = controllers;
+    }
+
+    public static CommonSparklingInteractor generic(Service http, List<?> controllers) {
+        ArrayList<CommonSparklingRequestTransformer> consumers = new ArrayList<>(EnumSet.allOf(CommonSparklingRequestTransformer.class));
+        return new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), controllers);
     }
 
     @Override
