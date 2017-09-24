@@ -39,6 +39,7 @@ public class CommonSparklingParser {
 
     public static void apply(InputStream openApi, ISparklingInteractor spark) {
         try {
+            // FIXME: Suspicious stream to string encoding
             CommonSparklingParser commonSparklingParser = new CommonSparklingParser(IOUtils.toString(openApi), spark);
             commonSparklingParser.parsing();
 

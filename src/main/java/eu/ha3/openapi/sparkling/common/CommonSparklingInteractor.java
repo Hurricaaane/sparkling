@@ -42,30 +42,35 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         Function<Object[], SparklingResponseContext> implentation = resolveControllerImplementation(operationId, controllerHint);
         List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
 
+        InternalSparklingRoute route = new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer);
+        addRouteToSpark(method, sparkPath, route);
+    }
+
+    private void addRouteToSpark(SparklingVerb method, String sparkPath, InternalSparklingRoute route) {
         switch (method) {
             case GET:
-                http.get(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.get(sparkPath, route);
                 break;
             case POST:
-                http.post(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.post(sparkPath, route);
                 break;
             case PUT:
-                http.put(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.put(sparkPath, route);
                 break;
             case PATCH:
-                http.patch(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.patch(sparkPath, route);
                 break;
             case DELETE:
-                http.delete(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.delete(sparkPath, route);
                 break;
             case HEAD:
-                http.head(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.head(sparkPath, route);
                 break;
             case TRACE:
-                http.trace(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.trace(sparkPath, route);
                 break;
             case OPTIONS:
-                http.options(sparkPath, new InternalSparklingRoute(implentation, allowedConsumers, parameters, deserializer));
+                http.options(sparkPath, route);
                 break;
         }
     }
@@ -117,7 +122,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         }
         // Do it in two passes so that weak matching occurs only after exact matching fails
         for (Object controller : controllers) {
-            if (isClassNameMatching(controller, controllerHint)) {
+            if (isClassNameWeaklyMatching(controller, controllerHint)) {
                 return controller;
             }
         }
