@@ -5,9 +5,9 @@ import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
 import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
-import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Service;
 
 import java.lang.reflect.InvocationTargetException;
@@ -46,18 +46,18 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
     }
 
     @Override
-    public void newRoute(String controllerHint, String operationId, SparklingVerb method, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
-        int bodyLocation = parameters.stream()
+    public void newRoute(RouteDefinition routeDefinition) {
+        int bodyLocation = routeDefinition.getParameters().stream()
                 .filter(parameter -> parameter.getLocation() == ParameterLocation.BODY)
                 .findFirst()
-                .map(parameters::indexOf)
+                .map(routeDefinition.getParameters()::indexOf)
                 .orElse(-1);
 
-        ReflectedMethodDescriptor descriptor = resolveControllerImplementation(operationId, controllerHint, bodyLocation);
-        List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(consumes);
+        ReflectedMethodDescriptor descriptor = resolveControllerImplementation(routeDefinition.getActionName(), routeDefinition.getTag(), bodyLocation);
+        List<ISparklingRequestTransformer> allowedConsumers = findAvailableConsumersApplicableForThisDeclaration(routeDefinition.getConsumes());
 
-        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getImplementation(), allowedConsumers, parameters, deserializer, descriptor.getPojoClass());
-        addRouteToSpark(method, sparkPath, route);
+        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getImplementation(), allowedConsumers, routeDefinition.getParameters(), deserializer, descriptor.getPojoClass());
+        addRouteToSpark(routeDefinition.getPost(), routeDefinition.getSparkPath(), route);
     }
 
     private void addRouteToSpark(SparklingVerb method, String sparkPath, InternalSparklingRoute route) {

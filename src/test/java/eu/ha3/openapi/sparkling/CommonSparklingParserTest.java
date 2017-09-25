@@ -1,9 +1,8 @@
 package eu.ha3.openapi.sparkling;
 
 import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
-import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
-import eu.ha3.openapi.sparkling.vo.SparklingParameter;
+import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 
 /**
  * (Default template)
@@ -46,7 +44,7 @@ class CommonSparklingParserTest {
     }
     private static class NoSparklingInteractor implements ISparklingInteractor {
         @Override
-        public void newRoute(String tag, String operationId, SparklingVerb post, String sparkPath, List<String> consumes, List<String> produces, List<SparklingParameter> parameters) {
+        public void newRoute(RouteDefinition routeDefinition) {
 
         }
     }

@@ -1,8 +1,9 @@
 package eu.ha3.openapi.sparkling.common;
 
+import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.exception.ParseSparklingException;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
-import eu.ha3.openapi.sparkling.enums.SparklingVerb;
+import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import eu.ha3.openapi.sparkling.vo.SparklingParameterHandler;
 import io.swagger.models.HttpMethod;
@@ -22,11 +23,13 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * (Default template)
@@ -37,7 +40,6 @@ import java.util.regex.Pattern;
 public class CommonSparklingParser {
     private static final Pattern SPEC_PATH_TEMPLATING = Pattern.compile("\\{(.*?)\\}");
     private final String openApi;
-    private final ISparklingInteractor sparkling;
 
     public static void apply(InputStream openApi, ISparklingInteractor spark, Charset charset) {
         try {
@@ -48,16 +50,20 @@ public class CommonSparklingParser {
         }
     }
 
+    /**
+     * Convenience method that creates a parser and declares all routes to the Spark implementation.
+     */
     public static void apply(String openApi, ISparklingInteractor spark) {
-        CommonSparklingParser commonSparklingParser = new CommonSparklingParser(openApi, spark);
-        commonSparklingParser.parsing();
+        CommonSparklingParser commonSparklingParser = new CommonSparklingParser(openApi);
+        List<RouteDefinition> parse = commonSparklingParser.parse();
+        for (RouteDefinition routeDefinition : parse) {
+            spark.newRoute(routeDefinition);
+        }
     }
 
-    public CommonSparklingParser(String openApi, ISparklingInteractor sparkling) {
-        this.openApi = openApi;
-        this.sparkling = sparkling;
-    }
-
+    /**
+     * Convenience method that creates a parser and declares all routes to the Spark implementation.
+     */
     public static void applyFile(java.nio.file.Path openApiFile, ISparklingInteractor spark, Charset charset) {
         try (InputStream inputStream = Files.newInputStream(openApiFile)) {
             apply(inputStream, spark, charset);
@@ -67,16 +73,20 @@ public class CommonSparklingParser {
         }
     }
 
-    private void parsing() {
+    public CommonSparklingParser(String openApi) {
+        this.openApi = openApi;
+    }
+
+    private List<RouteDefinition> parse() {
         try {
-            doParse();
+            return doParse();
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
         }
     }
 
-    private void doParse() throws IOException {
+    private List<RouteDefinition> doParse() throws IOException {
         java.nio.file.Path tempFile = null;
         try {
             tempFile = Files.createTempFile("oapi", ".json");
@@ -84,7 +94,7 @@ public class CommonSparklingParser {
 
             Swagger swagger = parseOpenApiWithReferencesFlattened(tempFile);
 
-            declareAllPaths(swagger);
+            return findAllRoutes(swagger);
 
         } finally {
             if (tempFile != null) {
@@ -93,42 +103,43 @@ public class CommonSparklingParser {
         }
     }
 
-    private void declareAllPaths(Swagger swagger) {
-        Map<String, Path> paths = swagger.getPaths();
-        for (Map.Entry<String, Path> pathToItem : paths.entrySet()) {
-            String specPath = pathToItem.getKey();
-
-            List<String> pathParameters = findAllPathParameters(specPath);
-            String sparkPath = replaceAllPathParametesWithSpark(specPath);
-
-            Map<HttpMethod, Operation> operationMap = pathToItem.getValue().getOperationMap();
-
-            declarePath(pathParameters, sparkPath, operationMap);
-        }
-    }
-
     private Swagger parseOpenApiWithReferencesFlattened(java.nio.file.Path tempFile) {
         return new SwaggerParser().read(tempFile.toAbsolutePath().toString(), Collections.emptyList(), true);
     }
 
-    private void declarePath(List<String> pathParameters, String sparkPath, Map<HttpMethod, Operation> operationMap) {
-        for (Map.Entry<HttpMethod, Operation> methodToOperation : operationMap.entrySet()) {
-            HttpMethod method = methodToOperation.getKey();
-            Operation operation = methodToOperation.getValue();
+    private List<RouteDefinition> findAllRoutes(Swagger swagger) {
+        return swagger.getPaths().entrySet().stream()
+                .map(pathToItem -> expandPath(pathToItem.getKey(), pathToItem.getValue()))
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+    }
 
-            List<SparklingParameter> parameters = parseParameters(operation);
+    private List<RouteDefinition> expandPath(String swaggerPath, Path pathDefinition) {
+        String sparkPath = convertPathParametersToSparkFormat(swaggerPath);
+        Map<HttpMethod, Operation> operationMap = pathDefinition.getOperationMap();
 
-            List<String> tags = operation.getTags();
-            String controllerHint = tags.size() > 0 ? tags.get(0) : "Unspecified";
+        return expandMethods(sparkPath, operationMap);
+    }
 
-            List<String> consumes = operation.getConsumes();
-            if (consumes == null) {
-                consumes = Arrays.asList("application/json");
-            }
+    private List<RouteDefinition> expandMethods(String sparkPath, Map<HttpMethod, Operation> operationMap) {
+        return operationMap.entrySet().stream()
+                .map(methodToOperation -> declareOperation(sparkPath, methodToOperation.getKey(), methodToOperation.getValue()))
+                .collect(Collectors.toList());
+    }
 
-            SparklingVerb verb = toVerb(method);
-            sparkling.newRoute(controllerHint, operation.getOperationId(), verb, sparkPath, consumes, operation.getProduces(), parameters);
+    private RouteDefinition declareOperation(String sparkPath, HttpMethod method, Operation operation) {
+        List<SparklingParameter> parameters = parseParameters(operation);
+
+        List<String> tags = operation.getTags();
+        String controllerHint = tags.size() > 0 ? tags.get(0) : "Unspecified";
+
+        List<String> consumes = operation.getConsumes();
+        if (consumes == null) {
+            consumes = Arrays.asList("application/json");
         }
+
+        SparklingVerb verb = toVerb(method);
+        return new RouteDefinition(controllerHint, operation.getOperationId(), verb, sparkPath, consumes, operation.getProduces(), parameters);
     }
 
     private SparklingVerb toVerb(HttpMethod method) {
@@ -174,7 +185,7 @@ public class CommonSparklingParser {
         return parameters;
     }
 
-    private String replaceAllPathParametesWithSpark(String specPath) {
+    private String convertPathParametersToSparkFormat(String specPath) {
         return SPEC_PATH_TEMPLATING.matcher(specPath).replaceAll(":$1");
     }
 
