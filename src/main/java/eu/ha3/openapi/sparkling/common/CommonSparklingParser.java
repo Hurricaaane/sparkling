@@ -1,5 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
+import eu.ha3.openapi.sparkling.exception.ParseSparklingException;
 import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
@@ -125,30 +126,39 @@ public class CommonSparklingParser {
                 consumes = Arrays.asList("application/json");
             }
 
-            switch (method) {
-                case POST:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.POST, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case GET:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.GET, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case PUT:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.PUT, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case PATCH:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.PATCH, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case DELETE:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.DELETE, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case HEAD:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.HEAD, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-                case OPTIONS:
-                    sparkling.newRoute(controllerHint, operation.getOperationId(), SparklingVerb.OPTIONS, sparkPath, consumes, operation.getProduces(), parameters);
-                    break;
-            }
+            SparklingVerb verb = toVerb(method);
+            sparkling.newRoute(controllerHint, operation.getOperationId(), verb, sparkPath, consumes, operation.getProduces(), parameters);
         }
+    }
+
+    private SparklingVerb toVerb(HttpMethod method) {
+        SparklingVerb verb;
+        switch (method) {
+            case POST:
+                verb = SparklingVerb.POST;
+                break;
+            case GET:
+                verb = SparklingVerb.GET;
+                break;
+            case PUT:
+                verb = SparklingVerb.PUT;
+                break;
+            case PATCH:
+                verb = SparklingVerb.PATCH;
+                break;
+            case DELETE:
+                verb = SparklingVerb.DELETE;
+                break;
+            case HEAD:
+                verb = SparklingVerb.HEAD;
+                break;
+            case OPTIONS:
+                verb = SparklingVerb.OPTIONS;
+                break;
+            default:
+                throw new ParseSparklingException("Unexpected method");
+        }
+        return verb;
     }
 
     private List<SparklingParameter> parseParameters(Operation operation) {
