@@ -1,6 +1,5 @@
 package eu.ha3.openapi.sparkling.routing;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -15,7 +14,7 @@ import java.util.Map;
  */
 public class SparklingResponseContext {
     private final MultivaluedMap<String, String> headers;
-    private final MediaType contentType;
+    private final String contentType;
     private final int status;
     private final Object entity;
 
@@ -23,7 +22,7 @@ public class SparklingResponseContext {
         this(new MultivaluedHashMap<>(), null, Response.Status.OK.getStatusCode(), null);
     }
 
-    public SparklingResponseContext(MultivaluedMap<String, String> headers, MediaType contentType, int status, Object entity) {
+    public SparklingResponseContext(MultivaluedMap<String, String> headers, String contentType, int status, Object entity) {
         this.headers = headers;
         this.contentType = contentType;
         this.status = status;
@@ -47,12 +46,8 @@ public class SparklingResponseContext {
         return newMap;
     }
 
-    public SparklingResponseContext contentType(MediaType contentType) {
-        return new SparklingResponseContext(headers, contentType, status, entity);
-    }
-
     public SparklingResponseContext contentType(String contentType) {
-        return new SparklingResponseContext(headers, MediaType.valueOf(contentType), status, entity);
+        return new SparklingResponseContext(headers, contentType, status, entity);
     }
 
     public SparklingResponseContext status(Response.Status status) {
@@ -71,7 +66,7 @@ public class SparklingResponseContext {
         return headers;
     }
 
-    public MediaType getContentType() {
+    public String getContentType() {
         return contentType;
     }
 

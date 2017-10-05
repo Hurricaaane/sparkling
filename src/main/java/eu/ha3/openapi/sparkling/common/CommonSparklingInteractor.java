@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 public class CommonSparklingInteractor implements ISparklingInteractor {
+    public static final int FIRST_PARAMETER_INDEX = 2;
     private final Service http;
     private final List<? extends ISparklingRequestTransformer> availableConsumers;
     private final ISparklingDeserializer deserializer;
@@ -107,7 +108,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
 
                 implementation = items -> invokeController(operationId, controller, method, items);
                 if (bodyParameterIndex != -1) {
-                    bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + 1];
+                    bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
 
                 } else {
                     bodyPojoClass = String.class;

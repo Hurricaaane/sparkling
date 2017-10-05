@@ -2,17 +2,17 @@ package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
 import spark.Response;
 import spark.Route;
 
-import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +45,7 @@ class InternalSparklingRoute implements Route {
         String contentType = request.contentType();
         ISparklingRequestTransformer consumer = getMatchingConsumer(contentType);
 
-        List<Object> extractedParameters = extractParameters(request, consumer);
+        List<Object> extractedParameters = extractParameters(request, response, consumer);
 
         SparklingResponseContext sparklingResponseContext = implementation.apply(extractedParameters.toArray());
         Object entity = applyResponse(sparklingResponseContext, response);
@@ -55,9 +55,9 @@ class InternalSparklingRoute implements Route {
 
     private Object applyResponse(SparklingResponseContext sparklingResponseContext, Response response) {
         response.status(sparklingResponseContext.getStatus());
-        MediaType contentType = sparklingResponseContext.getContentType();
+        String contentType = sparklingResponseContext.getContentType();
         if (contentType != null) {
-            response.type(contentType.getType());
+            response.type(contentType.toString());
         }
         for (Map.Entry<String, List<String>> header : sparklingResponseContext.getHeaders().entrySet()) {
             List<String> headerValues = header.getValue();
@@ -70,9 +70,10 @@ class InternalSparklingRoute implements Route {
         return sparklingResponseContext.getEntity();
     }
 
-    private List<Object> extractParameters(Request request, ISparklingRequestTransformer consumer) {
+    private List<Object> extractParameters(Request request, Response response, ISparklingRequestTransformer consumer) {
         List<Object> extractedParameters = new ArrayList<>();
         extractedParameters.add(request);
+        extractedParameters.add(response);
 
         for (SparklingParameter parameter : parameters) {
             Object item;
@@ -121,6 +122,7 @@ class InternalSparklingRoute implements Route {
             if (queryParamsValues != null) {
                 item = Arrays.stream(queryParamsValues)
                         .map(queryParam -> deserializer.deserializeSimple(parameter.getType(), parameter.getArrayType(), queryParam))
+                        .flatMap(Collection::stream)
                         .collect(Collectors.toList());
             } else {
                 // FIXME: Possible semantic difference between an optional query and a query with zero items
@@ -138,6 +140,7 @@ class InternalSparklingRoute implements Route {
         } else {
             item = Collections.list(request.raw().getHeaders(parameter.getName())).stream()
                     .map(queryParam -> deserializer.deserializeSimple(parameter.getType(), parameter.getArrayType(), queryParam))
+                    .flatMap(Collection::stream)
                     .collect(Collectors.toList());
         }
         return item;

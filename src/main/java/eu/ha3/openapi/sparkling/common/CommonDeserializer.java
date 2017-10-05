@@ -128,7 +128,7 @@ public class CommonDeserializer implements ISparklingDeserializer {
             stream = Arrays.stream(content.split("\\|"));
 
         } else if (arrayType == ArrayType.MULTI) {
-            // Multi is handled by the caller, whi will call the deserializer multiple times and flat map the arrays
+            // Multi is handled by the caller, which will call the deserializer multiple times and flat map the arrays
             stream = Stream.of(content);
 
         } else {
