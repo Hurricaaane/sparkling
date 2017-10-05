@@ -1,13 +1,12 @@
 package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.ParameterLocation;
-import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
-import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
-import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
-import eu.ha3.openapi.sparkling.routing.RouteDefinition;
-import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
+import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
+import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
+import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
+import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import spark.Service;
 
 import java.lang.reflect.InvocationTargetException;
@@ -100,7 +99,7 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         Object controller = resolveController(controllerHint);
         Class<?> bodyPojoClass;
 
-        Function<Object[], SparklingResponseContext> implementation;
+        Function<Object[], ?> implementation;
         if (controller != null) {
             Optional<Method> matchingMethod = resolveMatchingMethodByName(operationId, controller);
             if (matchingMethod.isPresent()) {
@@ -135,9 +134,9 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
                 .findFirst();
     }
 
-    private SparklingResponseContext invokeController(String operationId, Object controller, Method method, Object[] items) {
+    private Object invokeController(String operationId, Object controller, Method method, Object[] items) {
         try {
-            return (SparklingResponseContext) method.invoke(controller, items);
+            return method.invoke(controller, items);
 
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);

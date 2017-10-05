@@ -1,5 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
+import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
@@ -26,13 +27,13 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 class InternalSparklingRoute implements Route {
-    private final Function<Object[], SparklingResponseContext> implementation;
+    private final Function<Object[], ?> implementation;
     private final List<ISparklingRequestTransformer> availableConsumers;
     private final List<SparklingParameter> parameters;
     private final ISparklingDeserializer deserializer;
     private final Class<?> bodyPojoClass;
 
-    public InternalSparklingRoute(Function<Object[], SparklingResponseContext> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+    public InternalSparklingRoute(Function<Object[], ?> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
         this.implementation = implementation;
         this.availableConsumers = availableConsumers;
         this.parameters = parameters;
@@ -47,27 +48,42 @@ class InternalSparklingRoute implements Route {
 
         List<Object> extractedParameters = extractParameters(request, response, consumer);
 
-        SparklingResponseContext sparklingResponseContext = implementation.apply(extractedParameters.toArray());
-        Object entity = applyResponse(sparklingResponseContext, response);
+        Object returnedObject = implementation.apply(extractedParameters.toArray());
+        Object entity = applyResponse(request, response, returnedObject);
 
         return entity;
     }
 
-    private Object applyResponse(SparklingResponseContext sparklingResponseContext, Response response) {
-        response.status(sparklingResponseContext.getStatus());
-        String contentType = sparklingResponseContext.getContentType();
-        if (contentType != null) {
-            response.type(contentType.toString());
-        }
-        for (Map.Entry<String, List<String>> header : sparklingResponseContext.getHeaders().entrySet()) {
-            List<String> headerValues = header.getValue();
-            for (String value : headerValues) {
-                response.header(header.getKey(), value);
+    private Object applyResponse(Request request, Response response, Object returnedObject) {
+        if (returnedObject instanceof SparklingResponseContext) {
+            SparklingResponseContext sparklingResponseContext = (SparklingResponseContext) returnedObject;
+
+            response.status(sparklingResponseContext.getStatus());
+            String contentType = sparklingResponseContext.getContentType();
+            if (contentType != null) {
+                response.type(contentType);
+            }
+            for (Map.Entry<String, List<String>> header : sparklingResponseContext.getHeaders().entrySet()) {
+                List<String> headerValues = header.getValue();
+                for (String value : headerValues) {
+                    response.header(header.getKey(), value);
+                }
+            }
+
+            // FIXME: Transform response
+            return sparklingResponseContext.getEntity();
+
+        } else {
+            // FIXME: Transform response
+            String acceptHeader = request.headers("Accept");
+            if (acceptHeader != null && "application/json".equals(acceptHeader)) {
+                return new Gson().toJson(returnedObject);
+
+            } else {
+                // FIXME: How to handle other formats than JSON
+                return returnedObject;
             }
         }
-
-        // FIXME: Transform response
-        return sparklingResponseContext.getEntity();
     }
 
     private List<Object> extractParameters(Request request, Response response, ISparklingRequestTransformer consumer) {
