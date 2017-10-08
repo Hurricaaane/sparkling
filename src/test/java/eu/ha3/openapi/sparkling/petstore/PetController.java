@@ -22,7 +22,7 @@ public class PetController {
         return new SparklingResponseContext().entity(pet);
     }
 
-    public Object findPetsByStatus(Request request, Response response, List<String> query) {
+    public List<Pet> findPetsByStatus(Request request, Response response, List<String> query) {
         return Arrays.asList(new Pet(0, new Category(0, "string"), "string", Arrays.asList("string"), Arrays.asList(new Tag(0, "string")), "string"));
     }
 }
