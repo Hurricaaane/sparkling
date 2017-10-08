@@ -108,19 +108,16 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         }
 
         Object controller = resolveController(controllerHint);
-        Class<?> bodyPojoClass;
 
-        Function<Object[], ?> implementation;
         if (controller != null) {
             return whenControllerExists(operationId, bodyParameterIndex, parametersForDebugging, controller);
+
         } else {
             System.out.println("    WARNING: No controller found matching (" + controllerHint + "*) for operation " + operationId);
 
-            implementation = (Object[] items) -> {
+            return new ReflectedMethodDescriptor((Function<Object[], ?>) (Object[] items) -> {
                 throw new UnavailableControllerSparklingException("No controller matching " + controllerHint + " available for operation " + operationId);
-            };
-            bodyPojoClass = String.class;
-            return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+            }, String.class);
         }
     }
 
@@ -134,9 +131,6 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
     }
 
     private ReflectedMethodDescriptor whenControllerExists(String operationId, int bodyParameterIndex, List<SparklingParameter> parametersForDebugging, Object controller) {
-        Function<Object[], ?> implementation;
-        Class<?> bodyPojoClass;
-
         Optional<Method> matchingMethod = resolveMatchingMethodByName(operationId, controller);
         if (matchingMethod.isPresent()) {
             return whenMethodExists(operationId, bodyParameterIndex, parametersForDebugging, controller, matchingMethod.get());
@@ -144,48 +138,51 @@ public class CommonSparklingInteractor implements ISparklingInteractor {
         } else {
             System.out.println("    WARNING: No method " + operationId + " found in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
 
-            implementation = items -> {
+            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
                 throw new UnavailableControllerSparklingException("No method " + operationId + " available in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
-            };
-            bodyPojoClass = String.class;
-            return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+            }, String.class);
         }
     }
 
     private ReflectedMethodDescriptor whenMethodExists(String operationId, int bodyParameterIndex, List<SparklingParameter> parametersForDebugging, Object controller, Method method) {
-        Function<Object[], ?> implementation;
-        Class<?> bodyPojoClass;
         if (method.getParameters().length < 2 || method.getParameterTypes()[0] != Request.class || method.getParameterTypes()[1] != Response.class) {
             System.out.println("    ERROR: First two parameters are not Request, Respoinse in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            implementation = items -> {
+            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
                 throw new UnavailableControllerSparklingException("First two parameters are not Request, Respoinse in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            };
-            bodyPojoClass = String.class;
-            return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+            }, String.class);
 
         } else if (parametersForDebugging.size() == (method.getParameters().length - 2)) {
-            implementation = items -> invokeController(operationId, controller, method, items);
-            if (bodyParameterIndex != -1) {
-                bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
-                System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a body class: " + bodyPojoClass.getSimpleName());
-                return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
-
-            } else {
-                bodyPojoClass = String.class;
-                System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") without a body class");
-                return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
-            }
+            return whenMethodMatches(operationId, bodyParameterIndex, controller, method);
 
         } else {
             System.out.println("    ERROR: Expected " + (parametersForDebugging.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            implementation = items -> {
+            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
                 throw new UnavailableControllerSparklingException("Expected " + (parametersForDebugging.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            };
-            bodyPojoClass = String.class;
-            return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+            }, String.class);
         }
+    }
+
+    private ReflectedMethodDescriptor whenMethodMatches(String operationId, int bodyParameterIndex, Object controller, Method method) {
+        Function<Object[], ?> implementation = items -> invokeController(operationId, controller, method, items);
+        Class<?> bodyPojoClass = resolveBodyPojoClass(bodyParameterIndex, controller, method);
+
+        return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+    }
+
+    private Class<?> resolveBodyPojoClass(int bodyParameterIndex, Object controller, Method method) {
+        Class<?> bodyPojoClass;
+        if (bodyParameterIndex != -1) {
+            bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
+            System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a body class: " + bodyPojoClass.getSimpleName());
+
+        } else {
+            bodyPojoClass = String.class;
+            System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") without a body class");
+        }
+
+        return bodyPojoClass;
     }
 
     private Optional<Method> resolveMatchingMethodByName(String operationId, Object controller) {
