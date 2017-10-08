@@ -1,10 +1,10 @@
 package eu.ha3.openapi.sparkling;
 
-import eu.ha3.openapi.sparkling.common.CommonSparklingInteractor;
+import eu.ha3.openapi.sparkling.common.CommonSparkling;
 import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
 import eu.ha3.openapi.sparkling.petstore.PetController;
 import eu.ha3.openapi.sparkling.petstore.StoreController;
-import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
+import eu.ha3.openapi.sparkling.routing.ISparkling;
 import org.junit.jupiter.api.Disabled;
 import spark.Service;
 
@@ -42,11 +42,11 @@ public class Experimenting implements Runnable {
             response.header("Access-Control-Allow-Headers", "Content-Type,*");
         });
         List<?> implementations = Arrays.asList(new PetController(), new StoreController());
-        ISparklingInteractor sparkling = CommonSparklingInteractor.generic(http, implementations);
+        ISparkling sparkling = CommonSparkling.generic(http, implementations);
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
             http.path("/v2", () -> {
-                CommonSparklingParser.apply(openApiStream, sparkling, StandardCharsets.UTF_8);
+                CommonSparklingParser.createRoutes(openApiStream, sparkling, StandardCharsets.UTF_8);
             });
 
         } catch (IOException e) {

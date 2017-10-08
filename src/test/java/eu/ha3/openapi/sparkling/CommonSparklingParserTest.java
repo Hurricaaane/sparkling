@@ -1,7 +1,7 @@
 package eu.ha3.openapi.sparkling;
 
 import eu.ha3.openapi.sparkling.common.CommonSparklingParser;
-import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
+import eu.ha3.openapi.sparkling.routing.ISparkling;
 import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +24,7 @@ class CommonSparklingParserTest {
     @Test
     void creating() throws IOException {
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {
-            CommonSparklingParser.apply(openApiStream, new NoSparklingInteractor(), StandardCharsets.UTF_8);
+            CommonSparklingParser.createRoutes(openApiStream, new NoSparkling(), StandardCharsets.UTF_8);
         }
     }
 
@@ -42,7 +42,7 @@ class CommonSparklingParserTest {
             throw new IllegalStateException(e);
         }
     }
-    private static class NoSparklingInteractor implements ISparklingInteractor {
+    private static class NoSparkling implements ISparkling {
         @Override
         public void newRoute(RouteDefinition routeDefinition) {
 

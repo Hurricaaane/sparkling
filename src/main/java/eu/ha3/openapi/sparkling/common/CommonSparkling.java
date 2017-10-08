@@ -3,7 +3,7 @@ package eu.ha3.openapi.sparkling.common;
 import eu.ha3.openapi.sparkling.enums.ParameterLocation;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
-import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
+import eu.ha3.openapi.sparkling.routing.ISparkling;
 import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import spark.Service;
@@ -19,23 +19,21 @@ import java.util.stream.Collectors;
  *
  * @author Ha3
  */
-public class CommonSparklingInteractor implements ISparklingInteractor {
+public class CommonSparkling implements ISparkling {
     private final Service http;
     private final List<? extends ISparklingRequestTransformer> availableConsumers;
     private final ISparklingDeserializer deserializer;
-    private final List<?> controllers;
 
-    public CommonSparklingInteractor(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
+    public CommonSparkling(Service http, List<? extends ISparklingRequestTransformer> availableConsumers, ISparklingDeserializer deserializer, List<?> controllers) {
         this.http = http;
         this.availableConsumers = availableConsumers;
         this.deserializer = deserializer;
-        this.controllers = controllers;
-        IMPMATCH = new ImplementationMatcher(this.controllers);
+        IMPMATCH = new ImplementationMatcher(controllers);
     }
 
-    public static CommonSparklingInteractor generic(Service http, List<?> controllers) {
+    public static CommonSparkling generic(Service http, List<?> controllers) {
         ArrayList<CommonSparklingRequestTransformer> consumers = new ArrayList<>(EnumSet.allOf(CommonSparklingRequestTransformer.class));
-        return new CommonSparklingInteractor(http, consumers, new CommonDeserializer(), controllers);
+        return new CommonSparkling(http, consumers, new CommonDeserializer(), controllers);
     }
 
     private final ImplementationMatcher IMPMATCH;

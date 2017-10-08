@@ -6,6 +6,6 @@ package eu.ha3.openapi.sparkling.routing;
  *
  * @author Ha3
  */
-public interface ISparklingInteractor {
+public interface ISparkling {
     void newRoute(RouteDefinition routeDefinition);
 }
