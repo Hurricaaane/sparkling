@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import org.apache.commons.io.IOUtils;
 
@@ -27,7 +27,7 @@ import java.util.stream.Stream;
  *
  * @author Ha3
  */
-public class CommonDeserializer implements ISparklingDeserializer {
+public class CommonDeserializer implements SparklingDeserializer {
     public CommonDeserializer() {
     }
 

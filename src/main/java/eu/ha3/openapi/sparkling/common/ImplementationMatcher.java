@@ -106,8 +106,25 @@ class ImplementationMatcher {
     private Class<?> resolveBodyPojoClass(int bodyParameterIndex, Object controller, Method method) {
         Class<?> bodyPojoClass;
         if (bodyParameterIndex != -1) {
-            bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
-            System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a body class: " + bodyPojoClass.getSimpleName());
+            Class<?> possibleBodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
+//            if (List.class.isAssignableFrom(possibleBodyPojoClass)) {
+//                // FIXME: This is a huge mess that will not work because of application/json body requiring the Container of POJO, and multipart/form-data requiring the POJO
+//                // FIXME: Possible bad class resolution
+//                Type type = ((ParameterizedType) method.getGenericParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX])
+//                        .getActualTypeArguments()[0];
+//                if (type instanceof Class) {
+//                    bodyPojoClass = (Class<?>) type;
+//                    System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a complex list body class: " + bodyPojoClass.getSimpleName());
+//
+//                } else {
+//                    bodyPojoClass = String.class;
+//                    System.out.println("    ERROR: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + "), but body class is a List which generic type parameter isn't a class; will default to " + bodyPojoClass.getSimpleName() + " instead");
+//                }
+//
+//            } else {
+                bodyPojoClass = possibleBodyPojoClass;
+                System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a body class: " + bodyPojoClass.getSimpleName());
+//            }
 
         } else {
             bodyPojoClass = String.class;

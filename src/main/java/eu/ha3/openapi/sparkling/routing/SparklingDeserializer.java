@@ -13,7 +13,7 @@ import java.util.List;
  *
  * @author Ha3
  */
-public interface ISparklingDeserializer {
+public interface SparklingDeserializer {
     List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part);
     List<?> deserializeSimple(DeserializeInto type, ArrayType arrayType, String content);
     <T> T deserializeSchema(String body, SparklingParameter parameter, Class<T> target);

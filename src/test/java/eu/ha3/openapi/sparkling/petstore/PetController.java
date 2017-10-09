@@ -1,6 +1,5 @@
 package eu.ha3.openapi.sparkling.petstore;
 
-import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import spark.Request;
 import spark.Response;
 
@@ -14,12 +13,12 @@ import java.util.List;
  * @author Ha3
  */
 public class PetController {
-    public Object addPet(Request request, Response response, Pet pet) {
-        return new SparklingResponseContext().entity(pet);
+    public Pet addPet(Request request, Response response, Pet pet) {
+        return pet;
     }
 
-    public Object updatePet(Request request, Response response, Pet pet) {
-        return new SparklingResponseContext().entity(pet);
+    public Pet updatePet(Request request, Response response, Pet pet) {
+        return pet;
     }
 
     public List<Pet> findPetsByStatus(Request request, Response response, List<String> query) {

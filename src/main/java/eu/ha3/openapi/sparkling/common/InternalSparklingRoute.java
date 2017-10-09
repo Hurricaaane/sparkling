@@ -3,14 +3,15 @@ package eu.ha3.openapi.sparkling.common;
 import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
-import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
+import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.SparklingRequestTransformer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
 import spark.Response;
 import spark.Route;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,12 +29,12 @@ import java.util.stream.Collectors;
  */
 class InternalSparklingRoute implements Route {
     private final Function<Object[], ?> implementation;
-    private final List<ISparklingRequestTransformer> availableConsumers;
+    private final List<SparklingRequestTransformer> availableConsumers;
     private final List<SparklingParameter> parameters;
-    private final ISparklingDeserializer deserializer;
+    private final SparklingDeserializer deserializer;
     private final Class<?> bodyPojoClass;
 
-    public InternalSparklingRoute(Function<Object[], ?> implementation, List<ISparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+    public InternalSparklingRoute(Function<Object[], ?> implementation, List<SparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, SparklingDeserializer deserializer, Class<?> bodyPojoClass) {
         this.implementation = implementation;
         this.availableConsumers = availableConsumers;
         this.parameters = parameters;
@@ -44,7 +45,7 @@ class InternalSparklingRoute implements Route {
     @Override
     public Object handle(Request request, Response response) throws Exception {
         String contentType = request.contentType();
-        ISparklingRequestTransformer consumer = getMatchingConsumer(contentType);
+        SparklingRequestTransformer consumer = getMatchingConsumer(contentType);
 
         List<Object> extractedParameters = extractParameters(request, response, consumer);
 
@@ -73,10 +74,16 @@ class InternalSparklingRoute implements Route {
             // FIXME: Transform response
             return sparklingResponseContext.getEntity();
 
+        } else if (returnedObject instanceof InputStream) {
+            return returnedObject;
+
         } else {
             // FIXME: Transform response
             String acceptHeader = request.headers("Accept");
             if (acceptHeader != null && "application/json".equals(acceptHeader)) {
+                if (response.type() == null) {
+                    response.type("application/json");
+                }
                 return new Gson().toJson(returnedObject);
 
             } else {
@@ -86,7 +93,7 @@ class InternalSparklingRoute implements Route {
         }
     }
 
-    private List<Object> extractParameters(Request request, Response response, ISparklingRequestTransformer consumer) {
+    private List<Object> extractParameters(Request request, Response response, SparklingRequestTransformer consumer) {
         List<Object> extractedParameters = new ArrayList<>();
         extractedParameters.add(request);
         extractedParameters.add(response);
@@ -162,7 +169,7 @@ class InternalSparklingRoute implements Route {
         return item;
     }
 
-    private ISparklingRequestTransformer getMatchingConsumer(String contentType) {
+    private SparklingRequestTransformer getMatchingConsumer(String contentType) {
         return availableConsumers.stream()
                 .filter(availableConsumer -> availableConsumer.getApplicableContentTypes().contains(contentType))
                 .findFirst()

@@ -2,8 +2,8 @@ package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
-import eu.ha3.openapi.sparkling.routing.ISparklingRequestTransformer;
-import eu.ha3.openapi.sparkling.routing.ISparklingDeserializer;
+import eu.ha3.openapi.sparkling.routing.SparklingRequestTransformer;
+import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
 
@@ -26,10 +26,10 @@ import java.util.stream.Collectors;
  *
  * @author Ha3
  */
-public enum CommonSparklingRequestTransformer implements ISparklingRequestTransformer {
+public enum CommonSparklingRequestTransformer implements SparklingRequestTransformer {
     FORM_URL_ENCODED {
         @Override
-        public List<?> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+        public List<?> transform(Request request, SparklingParameter parameter, SparklingDeserializer deserializer, Class<?> bodyPojoClass) {
             if (parameter.getArrayType() != ArrayType.MULTI) {
                 String[] queryParamsValues = request.queryParamsValues(parameter.getName());
                 if (queryParamsValues != null) {
@@ -56,7 +56,7 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
         private volatile MultipartConfigElement multipartConfig;
 
         @Override
-        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+        public List<Object> transform(Request request, SparklingParameter parameter, SparklingDeserializer deserializer, Class<?> bodyPojoClass) {
             try {
                 if (multipartConfig == null) {
                     resolveMultipartConfig();
@@ -74,7 +74,7 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
             }
         }
 
-        private List<?> deserialize(ISparklingDeserializer deserializer, SparklingParameter parameter, Part part) {
+        private List<?> deserialize(SparklingDeserializer deserializer, SparklingParameter parameter, Part part) {
             try {
                 return deserializer.deserializePart(parameter.getType(), parameter.getArrayType(), part.getInputStream());
 
@@ -120,7 +120,7 @@ public enum CommonSparklingRequestTransformer implements ISparklingRequestTransf
     },
     APPLICATION_JSON {
         @Override
-        public List<Object> transform(Request request, SparklingParameter parameter, ISparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+        public List<Object> transform(Request request, SparklingParameter parameter, SparklingDeserializer deserializer, Class<?> bodyPojoClass) {
             return Arrays.asList(deserializer.deserializeSchema(request.body(), parameter, bodyPojoClass));
         }
 

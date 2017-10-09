@@ -2,7 +2,7 @@ package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.exception.ParseSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparkling;
+import eu.ha3.openapi.sparkling.routing.Sparkling;
 import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import eu.ha3.openapi.sparkling.vo.SparklingParameterHandler;
@@ -41,9 +41,12 @@ public class CommonSparklingParser {
     private static final Pattern SPEC_PATH_TEMPLATING = Pattern.compile("\\{(.*?)\\}");
     private final String openApi;
 
-    public static void createRoutes(InputStream openApi, ISparkling spark, Charset charset) {
+    /**
+     * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
+     */
+    public static void createRoutes(Sparkling sparkling, InputStream openApi, Charset charset) {
         try {
-            createRoutes(spark, IOUtils.toString(openApi, charset));
+            createRoutes(sparkling, IOUtils.toString(openApi, charset));
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
@@ -53,20 +56,20 @@ public class CommonSparklingParser {
     /**
      * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
      */
-    public static void createRoutes(ISparkling spark, String openApi) {
+    public static void createRoutes(Sparkling sparkling, String openApi) {
         CommonSparklingParser commonSparklingParser = new CommonSparklingParser(openApi);
         List<RouteDefinition> parse = commonSparklingParser.parse();
         for (RouteDefinition routeDefinition : parse) {
-            spark.newRoute(routeDefinition);
+            sparkling.newRoute(routeDefinition);
         }
     }
 
     /**
      * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
      */
-    public static void createRoutesFromFile(ISparkling sparkling, java.nio.file.Path openApiFile, Charset charset) {
+    public static void createRoutes(Sparkling sparkling, java.nio.file.Path openApiFile, Charset charset) {
         try (InputStream inputStream = Files.newInputStream(openApiFile)) {
-            createRoutes(inputStream, sparkling, charset);
+            createRoutes(sparkling, inputStream, charset);
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
