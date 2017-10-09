@@ -11,6 +11,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -61,7 +62,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public <T> T deserializeSchema(String body, SparklingParameter parameter, Class<T> target) {
+    public Object deserializeSchema(String body, SparklingParameter parameter, Type target) {
         return new Gson().fromJson(body, target);
     }
 
@@ -99,7 +100,6 @@ public class CommonDeserializer implements SparklingDeserializer {
             return OffsetDateTime.parse(content);
 
         } else if (type == DeserializeInto.STRING_CONFIDENTIAL) {
-            // If we're using Spark, we're using Java 8 => java.time is available
             return content.toCharArray();
 
         } else if (type == DeserializeInto.FILE) {

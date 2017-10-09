@@ -1,5 +1,7 @@
 package eu.ha3.openapi.sparkling.common;
 
+import java.lang.reflect.Type;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -9,19 +11,19 @@ import java.util.function.Function;
  * @author Ha3
  */
 class ReflectedMethodDescriptor {
-    private final Function<Object[], ?> implementation;
-    private final Class<?> pojoClass;
+    private final Function<List<Object>, ?> implementation;
+    private final List<Type> expectedRequestParameters;
 
-    public ReflectedMethodDescriptor(Function<Object[], ?> implementation, Class<?> pojoClass) {
+    public ReflectedMethodDescriptor(Function<List<Object>, ?> implementation, List<Type> expectedRequestParameters) {
         this.implementation = implementation;
-        this.pojoClass = pojoClass;
+        this.expectedRequestParameters = expectedRequestParameters;
     }
 
-    public Function<Object[], ?> getImplementation() {
+    public Function<List<Object>, ?> getImplementation() {
         return implementation;
     }
 
-    public Class<?> getPojoClass() {
-        return pojoClass;
+    public List<Type> getExpectedRequestParameters() {
+        return expectedRequestParameters;
     }
 }

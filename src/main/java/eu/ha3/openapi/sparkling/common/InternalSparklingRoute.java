@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
-import eu.ha3.openapi.sparkling.routing.SparklingRequestTransformer;
+import eu.ha3.openapi.sparkling.routing.SparklingRequestAggregator;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -28,28 +28,26 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 class InternalSparklingRoute implements Route {
-    private final Function<Object[], ?> implementation;
-    private final List<SparklingRequestTransformer> availableConsumers;
+    private final Function<List<Object>, ?> implementation;
+    private final List<SparklingRequestAggregator> availableConsumers;
     private final List<SparklingParameter> parameters;
     private final SparklingDeserializer deserializer;
-    private final Class<?> bodyPojoClass;
 
-    public InternalSparklingRoute(Function<Object[], ?> implementation, List<SparklingRequestTransformer> availableConsumers, List<SparklingParameter> parameters, SparklingDeserializer deserializer, Class<?> bodyPojoClass) {
+    public InternalSparklingRoute(Function<List<Object>, ?> implementation, List<SparklingRequestAggregator> availableConsumers, List<SparklingParameter> parameters, SparklingDeserializer deserializer) {
         this.implementation = implementation;
         this.availableConsumers = availableConsumers;
         this.parameters = parameters;
         this.deserializer = deserializer;
-        this.bodyPojoClass = bodyPojoClass;
     }
 
     @Override
     public Object handle(Request request, Response response) throws Exception {
         String contentType = request.contentType();
-        SparklingRequestTransformer consumer = getMatchingConsumer(contentType);
+        SparklingRequestAggregator aggregator = getMatchingAggregator(contentType);
 
-        List<Object> extractedParameters = extractParameters(request, response, consumer);
+        List<Object> extractedParameters = extractParameters(request, response, aggregator);
 
-        Object returnedObject = implementation.apply(extractedParameters.toArray());
+        Object returnedObject = implementation.apply(extractedParameters);
         Object entity = applyResponse(request, response, returnedObject);
 
         return entity;
@@ -80,7 +78,7 @@ class InternalSparklingRoute implements Route {
         } else {
             // FIXME: Transform response
             String acceptHeader = request.headers("Accept");
-            if (acceptHeader != null && "application/json".equals(acceptHeader)) {
+            if (acceptHeader == null || "application/json".equals(acceptHeader)) {
                 if (response.type() == null) {
                     response.type("application/json");
                 }
@@ -88,12 +86,15 @@ class InternalSparklingRoute implements Route {
 
             } else {
                 // FIXME: How to handle other formats than JSON
-                return returnedObject;
+                if (response.type() == null) {
+                    response.type("application/json");
+                }
+                return new Gson().toJson(returnedObject);
             }
         }
     }
 
-    private List<Object> extractParameters(Request request, Response response, SparklingRequestTransformer consumer) {
+    private List<Object> extractParameters(Request request, Response response, SparklingRequestAggregator aggregator) {
         List<Object> extractedParameters = new ArrayList<>();
         extractedParameters.add(request);
         extractedParameters.add(response);
@@ -111,10 +112,10 @@ class InternalSparklingRoute implements Route {
                     item = deserializeHeader(request, parameter);
                     break;
                 case BODY:
-                    item = consumer.transform(request, parameter, deserializer, bodyPojoClass);
+                    item = aggregator.transform(request, parameter, deserializer);
                     break;
                 case FORM:
-                    item = consumer.transform(request, parameter, deserializer, bodyPojoClass);
+                    item = aggregator.transform(request, parameter, deserializer);
                     break;
                 default:
                     throw new TransformationFailedInternalSparklingException("Unknown location");
@@ -169,12 +170,12 @@ class InternalSparklingRoute implements Route {
         return item;
     }
 
-    private SparklingRequestTransformer getMatchingConsumer(String contentType) {
+    private SparklingRequestAggregator getMatchingAggregator(String contentType) {
         return availableConsumers.stream()
                 .filter(availableConsumer -> availableConsumer.getApplicableContentTypes().contains(contentType))
                 .findFirst()
                 // FIXME: Handle non consumable requests
 //              .orElseThrow(() -> new ApiSparklingException(ApiSparklingCode.NOT_ACCEPTABLE));
-                .orElse(CommonSparklingRequestTransformer.APPLICATION_JSON);
+                .orElse(CommonSparklingRequestAggregator.APPLICATION_JSON);
     }
 }
