@@ -1,23 +1,19 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
 import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
-import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,20 +29,32 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public List<?> deserializePart(DeserializeInto type, ArrayType arrayType, InputStream part) {
+    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part) {
+        try (InputStream closingInputStream = part) {
+            // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
+            String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
+            return deserializeMultiValued(type, arrayType, content);
+
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part) {
         if (type == DeserializeInto.BYTE_STREAM) {
             // Stream must not be closed
-            return Collections.singletonList(part);
+            return part;
 
         } else if (type == DeserializeInto.FILE) {
             // Stream must not be closed
-            return Collections.singletonList(part);
+            return part;
 
         } else {
             try (InputStream closingInputStream = part) {
                 // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
                 String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
-                return deserializeSimple(type, arrayType, content);
+                return deserializeSingleValued(type, content);
 
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -55,18 +63,14 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public List<?> deserializeSimple(DeserializeInto type, ArrayType arrayType, String content) {
+    public List<Object> deserializeMultiValued(DeserializeInto type, ArrayType arrayType, String content) {
         return handleArrayTypeAsStream(type, arrayType, content)
                 .map(s -> deserializeSingleValued(type, content))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Object deserializeSchema(String body, SparklingParameter parameter, Type target) {
-        return new Gson().fromJson(body, target);
-    }
-
-    private Object deserializeSingleValued(DeserializeInto type, String content) {
+    public Object deserializeSingleValued(DeserializeInto type, String content) {
         if (type == DeserializeInto.INT) {
             return Integer.parseInt(content);
 
