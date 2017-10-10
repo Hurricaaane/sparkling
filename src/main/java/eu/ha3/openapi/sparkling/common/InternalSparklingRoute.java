@@ -142,7 +142,7 @@ class InternalSparklingRoute implements Route {
         Iterator<Type> reflectedIterator = reflectedMethod.getExpectedRequestParameters().iterator();
         while (parameterIterator.hasNext()) {
             SparklingParameter sparklingParameter = parameterIterator.next();
-            ParameterizedType reflectedType = (ParameterizedType) reflectedIterator.next();
+            Type reflectedType = reflectedIterator.next();
 
             Object value = deserializeParameter(request, parts, isMultipart, isFormUrlEncoded, sparklingParameter);
             Object model = modelize(value, reflectedType);
@@ -201,7 +201,7 @@ class InternalSparklingRoute implements Route {
         return item;
     }
 
-    private Object modelize(Object item, ParameterizedType reflectedType) {
+    private Object modelize(Object item, Type reflectedType) {
         if (item instanceof List) {
             return modelizeListSource(item, reflectedType, (List) item);
 
@@ -210,10 +210,11 @@ class InternalSparklingRoute implements Route {
         }
     }
 
-    private Object modelizeListSource(Object item, ParameterizedType reflectedType, List list) {
+    private Object modelizeListSource(Object item, Type reflectedType, List list) {
         if (list.size() > 0
                 && list.get(0) instanceof String
-                && reflectedType.getActualTypeArguments()[0] != String.class) {
+                && reflectedType instanceof ParameterizedType
+                && ((ParameterizedType)reflectedType).getActualTypeArguments()[0] != String.class) {
             return ((List<String>) item).stream()
                             .map(o -> new Gson().fromJson((String) o, reflectedType))
                             .collect(Collectors.toList());
@@ -223,8 +224,8 @@ class InternalSparklingRoute implements Route {
         }
     }
 
-    private Object modelizeStringSource(Object item, ParameterizedType reflectedType) {
-        if (item instanceof String && reflectedType.getRawType() != String.class) {
+    private Object modelizeStringSource(Object item, Type reflectedType) {
+        if (item instanceof String && reflectedType != String.class) {
             // reflectedType can be either a model, or a list of models, it will work the same
             return new Gson().fromJson((String) item, reflectedType);
 
