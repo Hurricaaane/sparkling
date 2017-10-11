@@ -1,6 +1,8 @@
 package eu.ha3.openapi.sparkling.common;
 
+import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
+import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -8,7 +10,11 @@ import spark.Response;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -31,9 +37,9 @@ class ImplementationMatcher {
     }
 
 
-    public ReflectedMethodDescriptor resolveControllerImplementation(String operationId, String controllerHint, int bodyParameterIndex, List<SparklingParameter> parametersForDebugging) {
-        if (parametersForDebugging.size() != 0) {
-            System.out.println("Searching for method (" + controllerHint + "*)." + operationId + " with parameters able to accommodate input parameters: " + parametersForDebugging.stream().map(ImplementationMatcher::debuggableParameterString).collect(Collectors.joining(", ")));
+    public ReflectedMethodDescriptor resolveControllerImplementation(String operationId, String controllerHint, List<SparklingParameter> parameters) {
+        if (parameters.size() != 0) {
+            System.out.println("Searching for method (" + controllerHint + "*)." + operationId + " with parameters able to accommodate input parameters: " + parameters.stream().map(ImplementationMatcher::debuggableParameterString).collect(Collectors.joining(", ")));
 
         } else {
             System.out.println("Searching for method (" + controllerHint + "*)." + operationId + " with parameters able to accommodate zero input parameters...");
@@ -42,14 +48,14 @@ class ImplementationMatcher {
         Object controller = resolveController(controllerHint);
 
         if (controller != null) {
-            return whenControllerExists(operationId, bodyParameterIndex, parametersForDebugging, controller);
+            return whenControllerExists(operationId, parameters, controller);
 
         } else {
             System.out.println("    WARNING: No controller found matching (" + controllerHint + "*) for operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<Object[], ?>) (Object[] items) -> {
+            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) (List<Object> items) -> {
                 throw new UnavailableControllerSparklingException("No controller matching " + controllerHint + " available for operation " + operationId);
-            }, String.class);
+            }, Collections.emptyList());
         }
     }
 
@@ -62,59 +68,54 @@ class ImplementationMatcher {
         }
     }
 
-    private ReflectedMethodDescriptor whenControllerExists(String operationId, int bodyParameterIndex, List<SparklingParameter> parametersForDebugging, Object controller) {
+    private ReflectedMethodDescriptor whenControllerExists(String operationId, List<SparklingParameter> parameters, Object controller) {
         Optional<Method> matchingMethod = resolveMatchingMethodByName(operationId, controller);
         if (matchingMethod.isPresent()) {
-            return whenMethodExists(operationId, bodyParameterIndex, parametersForDebugging, controller, matchingMethod.get());
+            return whenMethodExists(operationId, parameters, controller, matchingMethod.get());
 
         } else {
             System.out.println("    WARNING: No method " + operationId + " found in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
+            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
                 throw new UnavailableControllerSparklingException("No method " + operationId + " available in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
-            }, String.class);
+            }, Collections.emptyList());
         }
     }
 
-    private ReflectedMethodDescriptor whenMethodExists(String operationId, int bodyParameterIndex, List<SparklingParameter> parametersForDebugging, Object controller, Method method) {
+    private ReflectedMethodDescriptor whenMethodExists(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
         if (method.getParameters().length < 2 || method.getParameterTypes()[0] != Request.class || method.getParameterTypes()[1] != Response.class) {
             System.out.println("    ERROR: First two parameters are not Request, Respoinse in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
+            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
                 throw new UnavailableControllerSparklingException("First two parameters are not Request, Respoinse in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, String.class);
+            }, Collections.emptyList());
 
-        } else if (parametersForDebugging.size() == (method.getParameters().length - 2)) {
-            return whenMethodMatches(operationId, bodyParameterIndex, controller, method);
+        } else if (parameters.size() == (method.getParameters().length - 2)) {
+            return whenMethodMatches(operationId, controller, method, parameters);
 
         } else {
-            System.out.println("    ERROR: Expected " + (parametersForDebugging.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
+            System.out.println("    ERROR: Expected " + (parameters.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<Object[], ?>) items -> {
-                throw new UnavailableControllerSparklingException("Expected " + (parametersForDebugging.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, String.class);
+            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
+                throw new UnavailableControllerSparklingException("Expected " + (parameters.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
+            }, Collections.emptyList());
         }
     }
 
-    private ReflectedMethodDescriptor whenMethodMatches(String operationId, int bodyParameterIndex, Object controller, Method method) {
-        Function<Object[], ?> implementation = items -> invokeController(operationId, controller, method, items);
-        Class<?> bodyPojoClass = resolveBodyPojoClass(bodyParameterIndex, controller, method);
+    private ReflectedMethodDescriptor whenMethodMatches(String operationId, Object controller, Method method, List<SparklingParameter> parameters) {
+        List<Type> expectedTypesInController = resolveMethodRequestParameters(controller, method);
+        Function<List<Object>, ?> implementation = items -> invokeController(operationId, controller, method, items, expectedTypesInController, parameters);
 
-        return new ReflectedMethodDescriptor(implementation, bodyPojoClass);
+        return new ReflectedMethodDescriptor(implementation, expectedTypesInController);
     }
 
-    private Class<?> resolveBodyPojoClass(int bodyParameterIndex, Object controller, Method method) {
-        Class<?> bodyPojoClass;
-        if (bodyParameterIndex != -1) {
-            bodyPojoClass = method.getParameterTypes()[bodyParameterIndex + FIRST_PARAMETER_INDEX];
-            System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with a body class: " + bodyPojoClass.getSimpleName());
+    private List<Type> resolveMethodRequestParameters(Object controller, Method method) {
+        List<Type> types = Arrays.asList(method.getGenericParameterTypes());
+        List<Type> expectedTypes = new ArrayList<>(types.subList(FIRST_PARAMETER_INDEX, types.size()));
 
-        } else {
-            bodyPojoClass = String.class;
-            System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") without a body class");
-        }
+        System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + expectedTypes);
 
-        return bodyPojoClass;
+        return expectedTypes;
     }
 
     private Optional<Method> resolveMatchingMethodByName(String operationId, Object controller) {
@@ -151,9 +152,32 @@ class ImplementationMatcher {
         return controllerName.startsWith(hint);
     }
 
-    private Object invokeController(String operationId, Object controller, Method method, Object[] items) {
+    private Object invokeController(String operationId, Object controller, Method method, List<Object> items, List<Type> expectedTypesInController, List<SparklingParameter> parameters) {
         try {
-            return method.invoke(controller, items);
+            for (int i = 0; i < parameters.size(); i++) {
+                SparklingParameter parameter = parameters.get(i);
+                if (parameter.getType() == DeserializeInto.STRING) {
+                    Object item = items.get(FIRST_PARAMETER_INDEX + i);
+                    if (item != null) {
+                        Type type = expectedTypesInController.get(i);
+                        if (parameter.getArrayType() == ArrayType.NONE) {
+                            if (type instanceof ParameterizedType && ((ParameterizedType) type).getRawType() != String.class) {
+                                items.set(FIRST_PARAMETER_INDEX + i, new Gson().fromJson((String)item, type));
+                            }
+
+                        } else {
+                            if (type instanceof ParameterizedType && ((ParameterizedType) type).getActualTypeArguments()[0] != String.class) {
+                                List<String> list = (List<String>) item;
+                                items.set(FIRST_PARAMETER_INDEX + i, list.stream()
+                                        .map(s -> new Gson().fromJson(s, ((ParameterizedType) type).getActualTypeArguments()[0]))
+                                        .collect(Collectors.toList()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            return method.invoke(controller, items.toArray());
 
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);

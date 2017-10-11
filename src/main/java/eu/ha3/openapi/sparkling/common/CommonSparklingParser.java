@@ -2,7 +2,7 @@ package eu.ha3.openapi.sparkling.common;
 
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.exception.ParseSparklingException;
-import eu.ha3.openapi.sparkling.routing.ISparklingInteractor;
+import eu.ha3.openapi.sparkling.routing.Sparkling;
 import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import eu.ha3.openapi.sparkling.vo.SparklingParameterHandler;
@@ -41,9 +41,12 @@ public class CommonSparklingParser {
     private static final Pattern SPEC_PATH_TEMPLATING = Pattern.compile("\\{(.*?)\\}");
     private final String openApi;
 
-    public static void apply(InputStream openApi, ISparklingInteractor spark, Charset charset) {
+    /**
+     * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
+     */
+    public static void createRoutes(Sparkling sparkling, InputStream openApi, Charset charset) {
         try {
-            apply(IOUtils.toString(openApi, charset), spark);
+            createRoutes(sparkling, IOUtils.toString(openApi, charset));
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
@@ -51,22 +54,22 @@ public class CommonSparklingParser {
     }
 
     /**
-     * Convenience method that creates a parser and declares all routes to the Spark implementation.
+     * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
      */
-    public static void apply(String openApi, ISparklingInteractor spark) {
+    public static void createRoutes(Sparkling sparkling, String openApi) {
         CommonSparklingParser commonSparklingParser = new CommonSparklingParser(openApi);
         List<RouteDefinition> parse = commonSparklingParser.parse();
         for (RouteDefinition routeDefinition : parse) {
-            spark.newRoute(routeDefinition);
+            sparkling.newRoute(routeDefinition);
         }
     }
 
     /**
-     * Convenience method that creates a parser and declares all routes to the Spark implementation.
+     * Convenience method that creates a parser and declares all routes to the Sparkling implementation.
      */
-    public static void applyFile(java.nio.file.Path openApiFile, ISparklingInteractor spark, Charset charset) {
+    public static void createRoutes(Sparkling sparkling, java.nio.file.Path openApiFile, Charset charset) {
         try (InputStream inputStream = Files.newInputStream(openApiFile)) {
-            apply(inputStream, spark, charset);
+            createRoutes(sparkling, inputStream, charset);
 
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);

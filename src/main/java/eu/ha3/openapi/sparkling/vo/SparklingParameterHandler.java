@@ -109,7 +109,7 @@ public final class SparklingParameterHandler {
             arrayType = ArrayType.MULTI;
 
         } else {
-            throw new ParseSparklingException("Parameter has an unknown array collection format");
+            arrayType = ArrayType.UNSPECIFIED;
         }
         return arrayType;
     }

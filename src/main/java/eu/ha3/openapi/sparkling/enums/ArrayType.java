@@ -12,5 +12,5 @@ public enum ArrayType {
     SSV,
     TSV,
     PIPES,
-    MULTI
+    UNSPECIFIED, MULTI
 }
