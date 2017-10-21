@@ -12,6 +12,7 @@ public enum DeserializeInto {
     FLOAT,
     DOUBLE,
     STRING,
+    STRING_FILENAME,
     BYTE_ARRAY,
     BYTE_STREAM,
     BOOLEAN,

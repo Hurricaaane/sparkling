@@ -166,7 +166,7 @@ class ParameterAggregator {
 
     private Object deserializeSingleValuedPart(SparklingParameter parameter, Part part) {
         try {
-            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream());
+            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), part);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);

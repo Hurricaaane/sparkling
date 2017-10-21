@@ -6,6 +6,7 @@ import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingE
 import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import org.apache.commons.io.IOUtils;
 
+import javax.servlet.http.Part;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -41,7 +42,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part) {
+    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, Part aPart) {
         if (type == DeserializeInto.BYTE_STREAM) {
             // Stream must not be closed
             return part;
@@ -49,6 +50,9 @@ public class CommonDeserializer implements SparklingDeserializer {
         } else if (type == DeserializeInto.FILE) {
             // Stream must not be closed
             return part;
+
+        } else if (type == DeserializeInto.STRING_FILENAME) {
+            return aPart.getHeader("filename");
 
         } else {
             try (InputStream closingInputStream = part) {
@@ -107,6 +111,9 @@ public class CommonDeserializer implements SparklingDeserializer {
             return content.toCharArray();
 
         } else if (type == DeserializeInto.FILE) {
+            throw new TransformationFailedInternalSparklingException("Internal error, File deserialization must be treated as an input stream");
+
+        } else if (type == DeserializeInto.STRING_FILENAME) {
             throw new TransformationFailedInternalSparklingException("Internal error, File deserialization must be treated as an input stream");
 
         } else {

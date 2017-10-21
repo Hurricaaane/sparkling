@@ -1,5 +1,8 @@
 package eu.ha3.openapi.sparkling.common;
 
+import eu.ha3.openapi.sparkling.enums.ArrayType;
+import eu.ha3.openapi.sparkling.enums.DeserializeInto;
+import eu.ha3.openapi.sparkling.enums.ParameterLocation;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.exception.ParseSparklingException;
 import eu.ha3.openapi.sparkling.routing.Sparkling;
@@ -179,7 +182,11 @@ public class CommonSparklingParser {
         List<SparklingParameter> parameters = new ArrayList<>();
         for (Parameter parameter : operation.getParameters()) {
             if (parameter instanceof SerializableParameter) {
-                parameters.add(SparklingParameterHandler.from((SerializableParameter) parameter));
+                SparklingParameter sparklingParameter = SparklingParameterHandler.from((SerializableParameter) parameter);
+                if (sparklingParameter.getType() == DeserializeInto.FILE) {
+                    parameters.add(new SparklingParameter(sparklingParameter.getName() + "_filename", ParameterLocation.FORM, ArrayType.NONE, DeserializeInto.STRING_FILENAME, sparklingParameter.getRequirement()));
+                }
+                parameters.add(sparklingParameter);
 
             } else {
                 parameters.add(SparklingParameterHandler.ofBody(parameter));
