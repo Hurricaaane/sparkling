@@ -14,12 +14,21 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 public class Modelizer {
+    private final Gson gson;
+
+    public Modelizer(Gson gson) {
+        this.gson = gson;
+    }
+
     Object modelize(Object item, Type reflectedType) {
         if (item instanceof List) {
             return modelizeListSource(item, reflectedType, (List) item);
 
-        } else {
+        } else if (item instanceof String) {
             return modelizeStringSource(item, reflectedType);
+
+        } else {
+            return item;
         }
     }
 
@@ -39,7 +48,7 @@ public class Modelizer {
                 && reflectedType instanceof ParameterizedType
                 && ((ParameterizedType)reflectedType).getActualTypeArguments()[0] != String.class) {
             return ((List<String>) item).stream()
-                            .map(o -> new Gson().fromJson((String) o, reflectedType))
+                            .map(o -> gson.fromJson((String) o, reflectedType))
                             .collect(Collectors.toList());
 
         } else {

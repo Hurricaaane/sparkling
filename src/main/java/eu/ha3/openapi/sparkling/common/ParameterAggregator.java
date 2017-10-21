@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -157,7 +158,7 @@ class ParameterAggregator {
 
     private List<Object> deserializeMultiValuedPart(SparklingParameter parameter, Part part) {
         try {
-            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream());
+            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream(), toHeadersMap(part));
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -166,10 +167,15 @@ class ParameterAggregator {
 
     private Object deserializeSingleValuedPart(SparklingParameter parameter, Part part) {
         try {
-            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), part);
+            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), toHeadersMap(part));
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private Map<String, List<String>> toHeadersMap(Part part) {
+        return part.getHeaderNames().stream()
+                .collect(Collectors.toMap(o -> o, o -> new ArrayList<>(part.getHeaders(o))));
     }
 }

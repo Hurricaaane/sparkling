@@ -34,12 +34,15 @@ class InternalSparklingRoute implements Route {
     private final List<SparklingParameter> parameters;
     private final ParameterAggregator aggregator;
     private final Modelizer modelizer;
+    private final Gson gson;
 
     public InternalSparklingRoute(ReflectedMethodDescriptor reflectedMethod, List<SparklingParameter> parameters, SparklingDeserializer deserializer) {
         this.reflectedMethod = reflectedMethod;
         this.parameters = parameters;
+
+        gson = new Gson();
         aggregator = new ParameterAggregator(deserializer);
-        modelizer = new Modelizer();
+        modelizer = new Modelizer(gson);
     }
 
     @Override
@@ -82,14 +85,14 @@ class InternalSparklingRoute implements Route {
                 if (response.type() == null) {
                     response.type("application/json");
                 }
-                return new Gson().toJson(returnedObject);
+                return gson.toJson(returnedObject);
 
             } else {
                 // FIXME: How to handle other formats than JSON
                 if (response.type() == null) {
                     response.type("application/json");
                 }
-                return new Gson().toJson(returnedObject);
+                return gson.toJson(returnedObject);
             }
         }
     }

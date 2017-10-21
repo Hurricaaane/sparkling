@@ -6,7 +6,6 @@ import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingE
 import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import org.apache.commons.io.IOUtils;
 
-import javax.servlet.http.Part;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -16,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,7 +30,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part) {
+    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, Map<String, List<String>> partHeaders) {
         try (InputStream closingInputStream = part) {
             // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
             String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
@@ -42,7 +42,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, Part aPart) {
+    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, Map<String, List<String>> partHeaders) {
         if (type == DeserializeInto.BYTE_STREAM) {
             // Stream must not be closed
             return part;
@@ -52,7 +52,13 @@ public class CommonDeserializer implements SparklingDeserializer {
             return part;
 
         } else if (type == DeserializeInto.STRING_FILENAME) {
-            return aPart.getHeader("filename");
+            List<String> filenameHeaders = partHeaders.get("filename");
+            if (filenameHeaders != null && filenameHeaders.size() != 0) {
+                return filenameHeaders.get(0);
+
+            } else {
+                return null;
+            }
 
         } else {
             try (InputStream closingInputStream = part) {
@@ -75,29 +81,11 @@ public class CommonDeserializer implements SparklingDeserializer {
 
     @Override
     public Object deserializeSingleValued(DeserializeInto type, String content) {
-        if (type == DeserializeInto.INT) {
-            return Integer.parseInt(content);
-
-        } else if (type == DeserializeInto.LONG) {
-            return Long.parseLong(content);
-
-        } else if (type == DeserializeInto.FLOAT) {
-            return Float.parseFloat(content);
-
-        } else if (type == DeserializeInto.DOUBLE) {
-            return Double.parseDouble(content);
-
-        } else if (type == DeserializeInto.STRING) {
-            return content;
-
-        } else if (type == DeserializeInto.BYTE_ARRAY) {
+        if (type == DeserializeInto.BYTE_ARRAY) {
             return Base64.getDecoder().decode(content);
 
         } else if (type == DeserializeInto.BYTE_STREAM) {
             throw new TransformationFailedInternalSparklingException("Internal error, Byte stream deserialization must be treated as an input stream");
-
-        } else if (type == DeserializeInto.BOOLEAN) {
-            return Boolean.parseBoolean(content);
 
         } else if (type == DeserializeInto.DATE) {
             // If we're using Spark, we're using Java 8 => java.time is available
@@ -107,17 +95,11 @@ public class CommonDeserializer implements SparklingDeserializer {
             // If we're using Spark, we're using Java 8 => java.time is available
             return OffsetDateTime.parse(content);
 
-        } else if (type == DeserializeInto.STRING_CONFIDENTIAL) {
-            return content.toCharArray();
-
         } else if (type == DeserializeInto.FILE) {
             throw new TransformationFailedInternalSparklingException("Internal error, File deserialization must be treated as an input stream");
 
-        } else if (type == DeserializeInto.STRING_FILENAME) {
-            throw new TransformationFailedInternalSparklingException("Internal error, File deserialization must be treated as an input stream");
-
         } else {
-            throw new TransformationFailedInternalSparklingException("Unsupported deserialization type");
+            return content;
         }
     }
 
