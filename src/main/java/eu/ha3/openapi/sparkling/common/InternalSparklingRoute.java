@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -35,10 +36,13 @@ class InternalSparklingRoute implements Route {
     private final ParameterAggregator aggregator;
     private final Modelizer modelizer;
     private final Gson gson;
+    private final boolean isImplemented;
 
     public InternalSparklingRoute(ReflectedMethodDescriptor reflectedMethod, List<SparklingParameter> parameters, SparklingDeserializer deserializer) {
         this.reflectedMethod = reflectedMethod;
         this.parameters = parameters;
+
+        this.isImplemented = parameters.size() == reflectedMethod.getExpectedRequestParameters().size();
 
         gson = new Gson();
         aggregator = new ParameterAggregator(deserializer);
@@ -47,6 +51,11 @@ class InternalSparklingRoute implements Route {
 
     @Override
     public Object handle(Request request, Response response) throws Exception {
+        if (!isImplemented) {
+            Object returnedObject = reflectedMethod.getImplementation().apply(Collections.emptyList());
+            return applyResponse(request, response, returnedObject);
+        }
+
         String contentType = request.contentType();
 
         List<Object> models = extractModels(request, response);
