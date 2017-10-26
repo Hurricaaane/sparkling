@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * (Default template)
@@ -103,13 +104,13 @@ class ImplementationMatcher {
     }
 
     private ReflectedMethodDescriptor whenMethodMatches(String operationId, Object controller, Method method, List<SparklingParameter> parameters) {
-        List<Type> expectedTypesInController = resolveMethodRequestParameters(controller, method);
-        Function<List<Object>, ?> implementation = items -> invokeController(operationId, controller, method, items, expectedTypesInController, parameters);
+        List<Type> runtimeTypes = resolveRuntimeTypes(controller, method);
+        Function<List<Object>, ?> implementation = inputs -> invokeController(operationId, controller, method, inputs, runtimeTypes, parameters);
 
-        return new ReflectedMethodDescriptor(implementation, expectedTypesInController);
+        return new ReflectedMethodDescriptor(implementation, runtimeTypes);
     }
 
-    private List<Type> resolveMethodRequestParameters(Object controller, Method method) {
+    private List<Type> resolveRuntimeTypes(Object controller, Method method) {
         List<Type> types = Arrays.asList(method.getGenericParameterTypes());
         List<Type> expectedTypes = new ArrayList<>(types.subList(FIRST_PARAMETER_INDEX, types.size()));
 
@@ -152,35 +153,63 @@ class ImplementationMatcher {
         return controllerName.startsWith(hint);
     }
 
-    private Object invokeController(String operationId, Object controller, Method method, List<Object> items, List<Type> expectedTypesInController, List<SparklingParameter> parameters) {
+    private Object invokeController(String operationId, Object controller, Method method, List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
         try {
-            for (int i = 0; i < parameters.size(); i++) {
-                SparklingParameter parameter = parameters.get(i);
-                if (parameter.getType() == DeserializeInto.STRING) {
-                    Object item = items.get(FIRST_PARAMETER_INDEX + i);
-                    if (item != null) {
-                        Type type = expectedTypesInController.get(i);
-                        if (parameter.getArrayType() == ArrayType.NONE) {
-                            if (type instanceof ParameterizedType && ((ParameterizedType) type).getRawType() != String.class) {
-                                items.set(FIRST_PARAMETER_INDEX + i, new Gson().fromJson((String)item, type));
-                            }
+            List<Object> typedInputs = rewriteAllInputsToBeCloserToMethodTypes(inputs, runtimeTypes, parameters);
 
-                        } else {
-                            if (type instanceof ParameterizedType && ((ParameterizedType) type).getActualTypeArguments()[0] != String.class) {
-                                List<String> list = (List<String>) item;
-                                items.set(FIRST_PARAMETER_INDEX + i, list.stream()
-                                        .map(s -> new Gson().fromJson(s, ((ParameterizedType) type).getActualTypeArguments()[0]))
-                                        .collect(Collectors.toList()));
-                            }
-                        }
-                    }
-                }
-            }
-
-            return method.invoke(controller, items.toArray());
+            return method.invoke(controller, typedInputs.toArray());
 
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);
         }
+    }
+
+    private List<Object> rewriteAllInputsToBeCloserToMethodTypes(List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
+        List<Object> objects = rewriteInputsToBeCloserToMethodTypes(inputs.subList(FIRST_PARAMETER_INDEX, inputs.size()), runtimeTypes, parameters);
+        objects.add(0, inputs.get(0));
+        objects.add(1, inputs.get(1));
+        return objects;
+    }
+
+    private List<Object> rewriteInputsToBeCloserToMethodTypes(List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
+        return IntStream.range(0, parameters.size())
+                .mapToObj(i -> rewriteInputToBeCloserToMethodTypes(inputs.get(i), runtimeTypes.get(i), parameters.get(i)))
+                .collect(Collectors.toList());
+    }
+
+    private Object rewriteInputToBeCloserToMethodTypes(Object input, Type runtimeType, SparklingParameter parameter) {
+        if (parameter.getType() == DeserializeInto.STRING) {
+            if (input != null) {
+                return rewriteInputIfApplicable(input, parameter, runtimeType);
+            }
+        }
+
+        return input;
+    }
+
+    private Object rewriteInputIfApplicable(Object input, SparklingParameter parameter, Type runtimeTypeInController) {
+        if (parameter.getArrayType() == ArrayType.NONE) {
+            if (isNotStringType(runtimeTypeInController)) {
+                return new Gson().fromJson((String)input, runtimeTypeInController);
+            }
+
+        } else {
+            if (isNotStringCollection(runtimeTypeInController)) {
+                List<String> inputAsList = (List<String>) input;
+                return inputAsList.stream()
+                        .map(s -> new Gson().fromJson(s, ((ParameterizedType) runtimeTypeInController).getActualTypeArguments()[0]))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        return input;
+    }
+
+    private boolean isNotStringType(Type runtimeTypeInController) {
+        return runtimeTypeInController instanceof ParameterizedType && ((ParameterizedType) runtimeTypeInController).getRawType() != String.class;
+    }
+
+    private boolean isNotStringCollection(Type runtimeTypeInController) {
+        return runtimeTypeInController instanceof ParameterizedType && ((ParameterizedType) runtimeTypeInController).getActualTypeArguments()[0] != String.class;
     }
 }
