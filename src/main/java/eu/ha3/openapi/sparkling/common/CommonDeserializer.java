@@ -15,7 +15,6 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,7 +29,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, Map<String, List<String>> partHeaders) {
+    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename) {
         try (InputStream closingInputStream = part) {
             // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
             String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
@@ -42,7 +41,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, Map<String, List<String>> partHeaders) {
+    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename) {
         if (type == DeserializeInto.BYTE_STREAM) {
             // Stream must not be closed
             return part;
@@ -52,13 +51,7 @@ public class CommonDeserializer implements SparklingDeserializer {
             return part;
 
         } else if (type == DeserializeInto.STRING_FILENAME) {
-            List<String> filenameHeaders = partHeaders.get("filename");
-            if (filenameHeaders != null && filenameHeaders.size() != 0) {
-                return filenameHeaders.get(0);
-
-            } else {
-                return null;
-            }
+            return partFilename;
 
         } else {
             try (InputStream closingInputStream = part) {

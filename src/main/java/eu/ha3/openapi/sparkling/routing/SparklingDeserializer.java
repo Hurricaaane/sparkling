@@ -5,7 +5,6 @@ import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 
 /**
  * (Default template)
@@ -14,8 +13,8 @@ import java.util.Map;
  * @author Ha3
  */
 public interface SparklingDeserializer {
-    List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, Map<String, List<String>> stringListMap);
-    Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, Map<String, List<String>> partHeaders);
+    List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename);
+    Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename);
     List<Object> deserializeMultiValued(DeserializeInto type, ArrayType arrayType, String content);
     Object deserializeSingleValued(DeserializeInto type, String content);
 }

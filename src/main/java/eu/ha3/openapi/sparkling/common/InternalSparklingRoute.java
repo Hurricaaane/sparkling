@@ -160,7 +160,7 @@ class InternalSparklingRoute implements Route {
 
     private FormType resolveFormType(Request request) {
         FormType formType;
-        if ("multipart/form-data".equals(request.contentType())) {
+        if ("multipart/form-data".equals(request.contentType()) || request.contentType() != null && request.contentType().startsWith("multipart/form-data;")) {
             formType = FormType.MULTIPART;
 
         } else if ("application/x-www-form-urlencoded".equals(request.contentType())) {

@@ -52,6 +52,34 @@ public class Experimenting implements Runnable {
         }
     }
 
+//    public static void main(String[] args) {
+//        Service http = Service.ignite();
+//        http.options("*", (request, response) -> "");
+//        http.before((request, response) -> {
+//            response.header("Access-Control-Allow-Origin", "*");
+//            response.header("Access-Control-Request-Method", "*");
+//            response.header("Access-Control-Allow-Headers", "Content-Type,*");
+//        });
+//        List<?> implementations = Arrays.asList(new PetController(), new StoreController());
+//        Sparkling sparkling = Sparkling.setup(http, implementations);
+//
+//        sparkling.newRoute(new RouteDefinition(
+//                "pet", // Binds to PetController
+//                "addPet",
+//                SparklingVerb.POST,
+//                "/pet",
+//                Arrays.asList("application/json", "application/xml"),
+//                Arrays.asList("application/json", "application/xml"),
+//                Arrays.asList(new SparklingParameter(
+//                        "body",
+//                        ParameterLocation.BODY,
+//                        ArrayType.NONE,
+//                        DeserializeInto.STRING,
+//                        SparklingRequirement.REQUIRED
+//                ))
+//        ));
+//    }
+
     private Path pathFromResource(String resource) {
         try {
             URL url = Thread.currentThread().getContextClassLoader().getResource(resource);

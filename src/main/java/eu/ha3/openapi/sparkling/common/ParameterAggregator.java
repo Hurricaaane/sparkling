@@ -158,7 +158,7 @@ class ParameterAggregator {
 
     private List<Object> deserializeMultiValuedPart(SparklingParameter parameter, Part part) {
         try {
-            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream(), toHeadersMap(part));
+            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream(), part.getSubmittedFileName());
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -167,7 +167,7 @@ class ParameterAggregator {
 
     private Object deserializeSingleValuedPart(SparklingParameter parameter, Part part) {
         try {
-            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), toHeadersMap(part));
+            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), part.getSubmittedFileName());
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
