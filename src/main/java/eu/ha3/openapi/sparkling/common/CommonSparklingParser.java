@@ -184,7 +184,7 @@ public class CommonSparklingParser {
             if (parameter instanceof SerializableParameter) {
                 SparklingParameter sparklingParameter = SparklingParameterHandler.from((SerializableParameter) parameter);
                 if (sparklingParameter.getType() == DeserializeInto.FILE) {
-                    parameters.add(new SparklingParameter(sparklingParameter.getName(), ParameterLocation.FORM, ArrayType.NONE, DeserializeInto.STRING_FILENAME, sparklingParameter.getRequirement()));
+                    parameters.add(new SparklingParameter(sparklingParameter.getName() + "Name", ParameterLocation.FORM, ArrayType.NONE, DeserializeInto.STRING_FILENAME, sparklingParameter.getRequirement()));
                 }
                 parameters.add(sparklingParameter);
 

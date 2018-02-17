@@ -1,5 +1,6 @@
 package eu.ha3.openapi.sparkling.petstore;
 
+import eu.ha3.openapi.sparkling.vo.Question;
 import org.apache.commons.io.IOUtils;
 import spark.Request;
 import spark.Response;
@@ -30,6 +31,15 @@ public class PetController {
 
     public List<Pet> findPetsByStatus(Request request, Response response, List<String> query) {
         return Arrays.asList(new Pet(0, new Category(0, "string"), "string", Arrays.asList("string"), Arrays.asList(new Tag(0, "string")), "string"));
+    }
+
+    public Map<String, Object> uploadFile(Question<UploadFileRequest> uploadFileRequestQuestion) {
+        return uploadFile(uploadFileRequestQuestion.getRequest(), uploadFileRequestQuestion.getResponse(),
+                uploadFileRequestQuestion.getData().getPetId(),
+                uploadFileRequestQuestion.getData().getAdditionalMetadata(),
+                uploadFileRequestQuestion.getData().getFileName(),
+                uploadFileRequestQuestion.getData().getFile()
+        );
     }
 
     public Map<String, Object> uploadFile(Request request, Response response, long petId, String additionalMetadata, String filename, InputStream fileStream) {
