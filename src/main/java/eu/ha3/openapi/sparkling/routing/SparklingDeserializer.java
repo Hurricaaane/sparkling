@@ -13,8 +13,8 @@ import java.util.List;
  * @author Ha3
  */
 public interface SparklingDeserializer {
-    List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename);
-    Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename);
+    List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename, String possiblePartEncoding);
+    Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename, String possiblePartEncoding);
     List<Object> deserializeMultiValued(DeserializeInto type, ArrayType arrayType, String content);
     Object deserializeSingleValued(DeserializeInto type, String content);
 }

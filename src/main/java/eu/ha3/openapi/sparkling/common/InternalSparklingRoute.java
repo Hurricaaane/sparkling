@@ -29,6 +29,7 @@ import java.util.Map;
  * @author Ha3
  */
 class InternalSparklingRoute implements Route {
+    public static final String DEFAULT_MULTIPART_CHARSET = "UTF-8";
     private final Map<SparklingParameter, Type> reflectedTypes;
     private final ControllerInvoker reflectedMethod;
     private final ParameterAggregator aggregator;
@@ -126,15 +127,21 @@ class InternalSparklingRoute implements Route {
         FormType formType = resolveFormType(request);
 
         Collection<Part> parts = null;
+        String possiblePartEncoding = null;
         if (formType == FormType.MULTIPART) {
             parts = extractParts(request);
+
+            possiblePartEncoding = request.raw().getCharacterEncoding();
+            if (possiblePartEncoding == null) {
+                possiblePartEncoding = DEFAULT_MULTIPART_CHARSET;
+            }
         }
 
         Map<SparklingParameter, Object> models = new LinkedHashMap<>();
         for (Map.Entry<SparklingParameter, Type> reflectedTypeEntry : reflectedTypes.entrySet()) {
             SparklingParameter sparklingParameter = reflectedTypeEntry.getKey();
 
-            Object value = aggregator.aggregateParameter(request, sparklingParameter, formType, parts);
+            Object value = aggregator.aggregateParameter(request, sparklingParameter, formType, parts, possiblePartEncoding);
             Object model = modelizer.modelize(value, reflectedTypeEntry.getValue());
 
             models.put(sparklingParameter, model);

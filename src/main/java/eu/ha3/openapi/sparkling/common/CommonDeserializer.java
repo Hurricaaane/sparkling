@@ -9,7 +9,6 @@ import org.apache.commons.io.IOUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -29,10 +28,10 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename) {
+    public List<Object> deserializeMultiValuedPart(DeserializeInto type, ArrayType arrayType, InputStream part, String partFilename, String possiblePartEncoding) {
         try (InputStream closingInputStream = part) {
             // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
-            String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
+            String content = IOUtils.toString(closingInputStream, possiblePartEncoding);
             return deserializeMultiValued(type, arrayType, content);
 
         } catch (IOException e) {
@@ -41,7 +40,7 @@ public class CommonDeserializer implements SparklingDeserializer {
     }
 
     @Override
-    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename) {
+    public Object deserializeSingleValuedPart(DeserializeInto type, InputStream part, String partFilename, String possiblePartEncoding) {
         if (type == DeserializeInto.BYTE_STREAM) {
             // Stream must not be closed
             return part;
@@ -56,7 +55,7 @@ public class CommonDeserializer implements SparklingDeserializer {
         } else {
             try (InputStream closingInputStream = part) {
                 // FIXME: Suspicious stream to string encoding, Where should encoding come from? (possible passed as a parameter)
-                String content = IOUtils.toString(closingInputStream, StandardCharsets.UTF_8);
+                String content = IOUtils.toString(closingInputStream, possiblePartEncoding);
                 return deserializeSingleValued(type, content);
 
             } catch (IOException e) {

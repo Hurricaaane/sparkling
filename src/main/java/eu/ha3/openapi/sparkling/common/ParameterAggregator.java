@@ -30,7 +30,7 @@ class ParameterAggregator {
         this.deserializer = deserializer;
     }
 
-    public Object aggregateParameter(Request request, SparklingParameter parameter, FormType formType, Collection<Part> parts) {
+    public Object aggregateParameter(Request request, SparklingParameter parameter, FormType formType, Collection<Part> parts, String possiblePartEncoding) {
         Object item;
         switch (parameter.getLocation()) {
             case PATH:
@@ -46,7 +46,7 @@ class ParameterAggregator {
                 item = deserializeBody(request, parameter);
                 break;
             case FORM:
-                item = deserializeForm(request, parameter, formType, parts);
+                item = deserializeForm(request, parameter, formType, parts, possiblePartEncoding);
                 break;
             default:
                 throw new TransformationFailedInternalSparklingException("Unknown location");
@@ -100,10 +100,10 @@ class ParameterAggregator {
         return request.body();
     }
 
-    private Object deserializeForm(Request request, SparklingParameter parameter, FormType formType, Collection<Part> parts) {
+    private Object deserializeForm(Request request, SparklingParameter parameter, FormType formType, Collection<Part> parts, String possiblePartEncoding) {
         // FIXME Need some sort of content type check on "consumes"
         if (formType == FormType.MULTIPART) {
-            return deserializeMultiForm(parts, parameter);
+            return deserializeMultiForm(parts, parameter, possiblePartEncoding);
 
         } else if (formType == FormType.URL_ENCODED) {
             return deserializeApplicationForm(request, parameter);
@@ -114,24 +114,24 @@ class ParameterAggregator {
         }
     }
 
-    private Object deserializeMultiForm(Collection<Part> parts, SparklingParameter parameter) {
+    private Object deserializeMultiForm(Collection<Part> parts, SparklingParameter parameter, String possiblePartEncoding) {
         if (parameter.getArrayType() == ArrayType.NONE) {
             return parts.stream()
                     .filter(part -> parameter.getName().equals(part.getName()))
                     .findFirst()
-                    .map(part -> deserializeSingleValuedPart(parameter, part))
+                    .map(part -> deserializeSingleValuedPart(parameter, part, possiblePartEncoding))
                     .orElse(null);
 
         } else if (parameter.getArrayType() == ArrayType.MULTI) {
             return parts.stream().filter(part -> parameter.getName().equals(part.getName()))
-                    .map(part -> deserializeSingleValuedPart(parameter, part))
+                    .map(part -> deserializeSingleValuedPart(parameter, part, possiblePartEncoding))
                     .collect(Collectors.toList());
 
         } else {
             return parts.stream()
                     .filter(part -> parameter.getName().equals(part.getName()))
                     .findFirst()
-                    .map(part -> deserializeMultiValuedPart(parameter, part))
+                    .map(part -> deserializeMultiValuedPart(parameter, part, possiblePartEncoding))
                     .orElse(null);
         }
     }
@@ -156,18 +156,18 @@ class ParameterAggregator {
         }
     }
 
-    private List<Object> deserializeMultiValuedPart(SparklingParameter parameter, Part part) {
+    private List<Object> deserializeMultiValuedPart(SparklingParameter parameter, Part part, String possiblePartEncoding) {
         try {
-            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream(), part.getSubmittedFileName());
+            return deserializer.deserializeMultiValuedPart(parameter.getType(), parameter.getArrayType(), part.getInputStream(), part.getSubmittedFileName(), possiblePartEncoding);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private Object deserializeSingleValuedPart(SparklingParameter parameter, Part part) {
+    private Object deserializeSingleValuedPart(SparklingParameter parameter, Part part, String possiblePartEncoding) {
         try {
-            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), part.getSubmittedFileName());
+            return deserializer.deserializeSingleValuedPart(parameter.getType(), part.getInputStream(), part.getSubmittedFileName(), possiblePartEncoding);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
