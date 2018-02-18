@@ -21,28 +21,22 @@ import java.util.Map;
  * @author Ha3
  */
 public class PetController {
-    public Pet addPet(Request request, Response response, Pet pet) {
-        return pet;
+    public Pet addPet(Question<BodyPetRequest> question) {
+        return question.getData().body;
     }
 
-    public Pet updatePet(Request request, Response response, Pet pet) {
-        return pet;
+    public Pet updatePet(Question<BodyPetRequest> question) {
+        return question.getData().body;
     }
 
-    public List<Pet> findPetsByStatus(Request request, Response response, List<String> query) {
+    public List<Pet> findPetsByStatus(Question<FindPetsByStatusRequest> question) {
         return Arrays.asList(new Pet(0, new Category(0, "string"), "string", Arrays.asList("string"), Arrays.asList(new Tag(0, "string")), "string"));
     }
 
-    public Map<String, Object> uploadFile(Question<UploadFileRequest> uploadFileRequestQuestion) {
-        return uploadFile(uploadFileRequestQuestion.getRequest(), uploadFileRequestQuestion.getResponse(),
-                uploadFileRequestQuestion.getData().getPetId(),
-                uploadFileRequestQuestion.getData().getAdditionalMetadata(),
-                uploadFileRequestQuestion.getData().getFileName(),
-                uploadFileRequestQuestion.getData().getFile()
-        );
-    }
+    public Map<String, Object> uploadFile(Question<UploadFileRequest> question) {
+        InputStream fileStream = question.getData().file;
+        String filename = question.getData().fileName;
 
-    public Map<String, Object> uploadFile(Request request, Response response, long petId, String additionalMetadata, String filename, InputStream fileStream) {
         try (InputStream stream = fileStream) {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("code", 0);
@@ -53,5 +47,22 @@ public class PetController {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private class BodyPetRequest {
+        Pet body;
+    }
+
+    private class FindPetsByStatusRequest {
+        Request request;
+        Response response;
+        List<String> status;
+    }
+
+    public class UploadFileRequest {
+        long petId;
+        String additionalMetadata;
+        String fileName;
+        InputStream file;
     }
 }

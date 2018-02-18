@@ -36,9 +36,9 @@ public class CommonSparkling implements Sparkling {
 
     @Override
     public void newRoute(RouteDefinition routeDefinition) {
-        ReflectedMethodDescriptor descriptor = implementationMatcher.resolveControllerImplementation(routeDefinition.getActionName(), routeDefinition.getTag(), routeDefinition.getParameters());
+        ControllerInvoker descriptor = implementationMatcher.resolveControllerImplementation(routeDefinition.getActionName(), routeDefinition.getTag(), routeDefinition.getParameters());
 
-        InternalSparklingRoute route = new InternalSparklingRoute(descriptor, routeDefinition.getParameters(), deserializer);
+        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getReflectedTypeMap(), descriptor, routeDefinition.getParameters(), deserializer);
         addRouteToSpark(routeDefinition.getPost(), routeDefinition.getSparkPath(), route);
     }
 

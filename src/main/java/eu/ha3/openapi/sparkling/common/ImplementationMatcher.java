@@ -1,31 +1,24 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
-import eu.ha3.openapi.sparkling.enums.DeserializeInto;
-import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
 import eu.ha3.openapi.sparkling.vo.Question;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
 import spark.Response;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * (Default template)
@@ -34,7 +27,7 @@ import java.util.stream.IntStream;
  * @author Ha3
  */
 class ImplementationMatcher {
-    private static final int FIRST_PARAMETER_INDEX = 2;
+    static final int FIRST_PARAMETER_INDEX = 2;
 
     private final List<?> controllers;
 
@@ -42,8 +35,7 @@ class ImplementationMatcher {
         this.controllers = controllers;
     }
 
-
-    public ReflectedMethodDescriptor resolveControllerImplementation(String operationId, String controllerHint, List<SparklingParameter> parameters) {
+    public ControllerInvoker resolveControllerImplementation(String operationId, String controllerHint, List<SparklingParameter> parameters) {
         if (parameters.size() != 0) {
             System.out.println("Searching for method (" + controllerHint + "*)." + operationId + " with parameters able to accommodate input parameters: " + parameters.stream().map(ImplementationMatcher::debuggableParameterString).collect(Collectors.joining(", ")));
 
@@ -59,9 +51,7 @@ class ImplementationMatcher {
         } else {
             System.out.println("    WARNING: No controller found matching (" + controllerHint + "*) for operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) (List<Object> items) -> {
-                throw new UnavailableControllerSparklingException("No controller matching " + controllerHint + " available for operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "No controller matching " + controllerHint + " available for operation " + operationId);
         }
     }
 
@@ -74,7 +64,7 @@ class ImplementationMatcher {
         }
     }
 
-    private ReflectedMethodDescriptor whenControllerExists(String operationId, List<SparklingParameter> parameters, Object controller) {
+    private ControllerInvoker whenControllerExists(String operationId, List<SparklingParameter> parameters, Object controller) {
         List<Method> matchingMethods = resolveMatchingMethodsByName(operationId, controller);
         if (!matchingMethods.isEmpty()) {
             return whenMethodExists(operationId, parameters, controller, matchingMethods);
@@ -82,46 +72,43 @@ class ImplementationMatcher {
         } else {
             System.out.println("    WARNING: No method " + operationId + " found in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                throw new UnavailableControllerSparklingException("No method " + operationId + " available in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "No method " + operationId + " available in controller " + controller.getClass().getSimpleName() + " to call operation " + operationId);
         }
     }
 
-    private ReflectedMethodDescriptor whenMethodExists(String operationId, List<SparklingParameter> parameters, Object controller, List<Method> methods) {
+    private ControllerInvoker whenMethodExists(String operationId, List<SparklingParameter> parameters, Object controller, List<Method> methods) {
         Optional<Method> questionMethod = methods.stream()
                 .filter(method -> method.getParameters().length == 1)
                 .findFirst();
 
-        if (questionMethod.isPresent()) {
-            return withQuestionMethod(operationId, parameters, controller, questionMethod.get());
-
-        } else {
-            return methods.stream()
-                    .filter(method1 -> method1.getParameters().length > 1)
-                    .findFirst()
-                    .map(method -> withOrderedMethod(operationId, parameters, controller, method))
-                    .orElseGet(() -> {
-                        System.out.println("    ERROR: No method candidate for " + controller.getClass().getSimpleName() + "." + operationId + " to call operation " + operationId);
-
-                        return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                            throw new UnavailableControllerSparklingException("No method candidate for " + controller.getClass().getSimpleName() + "." + operationId + " to call operation " + operationId);
-                        }, Collections.emptyList());
-                    });
-        }
+        return questionMethod
+                .map(method -> withQuestionMethod(operationId, parameters, controller, method))
+                .orElseGet(() -> withOrderedMethod(operationId, parameters, controller, methods));
     }
 
-    private ReflectedMethodDescriptor withQuestionMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
+    private ControllerInvoker withOrderedMethod(String operationId, List<SparklingParameter> parameters, Object controller, List<Method> methods) {
+        Optional<Method> orderedMethod = methods.stream()
+                .filter(method -> method.getParameters().length > 1)
+                .findFirst();
+
+        return orderedMethod
+                .map(method -> withOrderedMethod(operationId, parameters, controller, method))
+                .orElseGet(() -> {
+                    System.out.println("    ERROR: No method candidate for " + controller.getClass().getSimpleName() + "." + operationId + " to call operation " + operationId);
+
+                    return new NoImplementationControllerInvoker(parameters, "No method candidate for " + controller.getClass().getSimpleName() + "." + operationId + " to call operation " + operationId);
+                });
+    }
+
+    private ControllerInvoker withQuestionMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
         if (method.getParameterTypes()[0] != Question.class) {
             System.out.println("    ERROR: First and only parameter is not Question in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                throw new UnavailableControllerSparklingException("First and only parameter is not Question in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "First and only parameter is not Question in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
         }
 
 
-        List<Type> methodTypes = resolveQuestionRuntimeTypes(controller, method);
+        List<Type> methodTypes = resolveQuestionRuntimeTypes(method);
         ParameterizedType type = (ParameterizedType) methodTypes.get(0);
         Type dataType = type.getActualTypeArguments()[0];
 
@@ -130,7 +117,7 @@ class ImplementationMatcher {
 
         Field[] declaredFields = rawQuestionType.getDeclaredFields();
 
-        List<Type> runtimeTypes = new ArrayList<>();
+        Map<SparklingParameter, Type> reflectedTypes = new LinkedHashMap<>();
         List<String> missingFields = new ArrayList<>();
         for (SparklingParameter parameter : parameters) {
             Optional<Field> dataTypeField = Arrays.stream(declaredFields)
@@ -139,7 +126,7 @@ class ImplementationMatcher {
             if (dataTypeField.isPresent()) {
                 Field field = dataTypeField.get();
                 Type genericType = field.getGenericType();
-                runtimeTypes.add(genericType);
+                reflectedTypes.put(parameter, genericType);
 
             } else {
                 missingFields.add(parameter.getName());
@@ -149,91 +136,54 @@ class ImplementationMatcher {
         if (!missingFields.isEmpty()) {
             System.out.println("    ERROR: In data type " + dataType + ", missing fields (" + missingFields.stream().collect(Collectors.joining(", ")) + ") for method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                throw new UnavailableControllerSparklingException("First two parameters are not Request, Response in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "First two parameters are not Request, Response in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
         }
 
-        System.out.println("    OK: Resolveing question " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + runtimeTypes);
+        System.out.println("    OK: Resolving question " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + reflectedTypes);
 
-        Function<List<Object>, ?> implementation = inputs -> invokeControllerQuestion(operationId, controller, method, convertInputsToDataType(parameters, inputs, dataType), runtimeTypes, parameters);
-
-        return new ReflectedMethodDescriptor(implementation, runtimeTypes);
+        return new QuestionControllerInvoker(operationId, controller, method, parameters, reflectedTypes, dataType);
     }
 
-    private List<Object> convertInputsToDataType(List<SparklingParameter> parameters, List<Object> inputs, Type dataType) {
-        try {
-            Map<String, Object> intermediaryMap = new LinkedHashMap<>();
-            for (int i = 0; i < parameters.size(); i++) {
-                SparklingParameter parameter = parameters.get(i);
-                intermediaryMap.put(parameter.getName(), inputs.get(i + ImplementationMatcher.FIRST_PARAMETER_INDEX));
-            }
-
-            Object dataObject = new Gson().fromJson("{}", dataType);
-
-            TypeToken<?> typeToken = TypeToken.get(dataType);
-            Class<?> rawType = typeToken.getRawType();
-
-            Field[] declaredFields = rawType.getDeclaredFields();
-            for (Field declaredField : declaredFields) {
-                if (!declaredField.isAccessible()) {
-                    declaredField.setAccessible(true);
-                }
-
-                Object value = intermediaryMap.get(declaredField.getName());
-
-                // FIXME: Horrible stream, this class does too much
-                SparklingParameter theSparklingParameter = parameters.stream().filter(sparklingParameter -> sparklingParameter.getName().equals(declaredField.getName())).findFirst().get();
-                declaredField.set(dataObject, rewriteInputToBeCloserToMethodTypes(value, declaredField.getGenericType(), theSparklingParameter));
-            }
-
-            Question question = new Question((Request) inputs.get(0), (Response) inputs.get(1), dataObject);
-
-            return new ArrayList<>(Collections.singletonList(question));
-
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private ReflectedMethodDescriptor withOrderedMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
+    private ControllerInvoker withOrderedMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
         if (method.getParameters().length < 2 || method.getParameterTypes()[0] != Request.class || method.getParameterTypes()[1] != Response.class) {
             System.out.println("    ERROR: First two parameters are not Request, Response in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                throw new UnavailableControllerSparklingException("First two parameters are not Request, Response in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "First two parameters are not Request, Response in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-        } else if (parameters.size() == (method.getParameters().length - 2)) {
-            return whenMethodMatches(operationId, controller, method, parameters);
-
-        } else {
+        } else if (parameters.size() != (method.getParameters().length - 2)) {
             System.out.println("    ERROR: Expected " + (parameters.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
 
-            return new ReflectedMethodDescriptor((Function<List<Object>, ?>) items -> {
-                throw new UnavailableControllerSparklingException("Expected " + (parameters.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
-            }, Collections.emptyList());
+            return new NoImplementationControllerInvoker(parameters, "Expected " + (parameters.size() + 2) +  " parameters but found incorrect count of " + method.getParameters().length + " in method " + controller.getClass().getSimpleName() + "." + method.getName() + " to call operation " + operationId);
+
+        } else {
+            return whenOrderedMethodMatches(operationId, controller, method, parameters);
         }
     }
 
-    private ReflectedMethodDescriptor whenMethodMatches(String operationId, Object controller, Method method, List<SparklingParameter> parameters) {
-        List<Type> runtimeTypes = resolveOrderedRuntimeTypes(controller, method);
-        Function<List<Object>, ?> implementation = inputs -> invokeController(operationId, controller, method, inputs, runtimeTypes, parameters);
+    private ControllerInvoker whenOrderedMethodMatches(String operationId, Object controller, Method method, List<SparklingParameter> parameters) {
+        List<Type> argumentTypes = resolveOrderedArgumentTypes(method);
+        System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + argumentTypes);
 
-        return new ReflectedMethodDescriptor(implementation, runtimeTypes);
+        Map<SparklingParameter, Type> reflectedTypes = new LinkedHashMap<>();
+        for (int i = 0; i < parameters.size(); i++) {
+            SparklingParameter parameter = parameters.get(i);
+            Type reflectedType = argumentTypes.get(i);
+
+            reflectedTypes.put(parameter, reflectedType);
+        }
+
+        return new OrderedControllerInvoker(operationId, controller, method, parameters, reflectedTypes);
     }
 
-    private List<Type> resolveQuestionRuntimeTypes(Object controller, Method method) {
+    private List<Type> resolveQuestionRuntimeTypes(Method method) {
         List<Type> types = Arrays.asList(method.getGenericParameterTypes());
 
         return types;
     }
 
-    private List<Type> resolveOrderedRuntimeTypes(Object controller, Method method) {
+    private List<Type> resolveOrderedArgumentTypes(Method method) {
         List<Type> types = Arrays.asList(method.getGenericParameterTypes());
         List<Type> expectedTypes = new ArrayList<>(types.subList(FIRST_PARAMETER_INDEX, types.size()));
-
-        System.out.println("    OK: Resolved " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + expectedTypes);
 
         return expectedTypes;
     }
@@ -272,72 +222,4 @@ class ImplementationMatcher {
         return controllerName.startsWith(hint);
     }
 
-    private Object invokeControllerQuestion(String operationId, Object controller, Method method, List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
-        try {
-            return method.invoke(controller, inputs.toArray());
-
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);
-        }
-    }
-
-    private Object invokeController(String operationId, Object controller, Method method, List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
-        try {
-            List<Object> typedInputs = rewriteAllInputsToBeCloserToMethodTypes(inputs, runtimeTypes, parameters);
-
-            return method.invoke(controller, typedInputs.toArray());
-
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new UnavailableControllerSparklingException("Controller has failed to call this operation: " + operationId, e);
-        }
-    }
-
-    private List<Object> rewriteAllInputsToBeCloserToMethodTypes(List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
-        List<Object> objects = rewriteInputsToBeCloserToMethodTypes(inputs.subList(FIRST_PARAMETER_INDEX, inputs.size()), runtimeTypes, parameters);
-        objects.add(0, inputs.get(0));
-        objects.add(1, inputs.get(1));
-        return objects;
-    }
-
-    private List<Object> rewriteInputsToBeCloserToMethodTypes(List<Object> inputs, List<Type> runtimeTypes, List<SparklingParameter> parameters) {
-        return IntStream.range(0, parameters.size())
-                .mapToObj(i -> rewriteInputToBeCloserToMethodTypes(inputs.get(i), runtimeTypes.get(i), parameters.get(i)))
-                .collect(Collectors.toList());
-    }
-
-    private Object rewriteInputToBeCloserToMethodTypes(Object input, Type runtimeType, SparklingParameter parameter) {
-        if (parameter.getType() == DeserializeInto.STRING) {
-            if (input != null) {
-                return rewriteInputIfApplicable(input, parameter, runtimeType);
-            }
-        }
-
-        return input;
-    }
-
-    private Object rewriteInputIfApplicable(Object input, SparklingParameter parameter, Type runtimeTypeInController) {
-        if (parameter.getArrayType() == ArrayType.NONE) {
-            if (isNotStringType(runtimeTypeInController)) {
-                return new Gson().fromJson((String)input, runtimeTypeInController);
-            }
-
-        } else {
-            if (isNotStringCollection(runtimeTypeInController)) {
-                List<String> inputAsList = (List<String>) input;
-                return inputAsList.stream()
-                        .map(s -> new Gson().fromJson(s, ((ParameterizedType) runtimeTypeInController).getActualTypeArguments()[0]))
-                        .collect(Collectors.toList());
-            }
-        }
-
-        return input;
-    }
-
-    private boolean isNotStringType(Type runtimeTypeInController) {
-        return runtimeTypeInController instanceof ParameterizedType && ((ParameterizedType) runtimeTypeInController).getRawType() != String.class;
-    }
-
-    private boolean isNotStringCollection(Type runtimeTypeInController) {
-        return runtimeTypeInController instanceof ParameterizedType && ((ParameterizedType) runtimeTypeInController).getActualTypeArguments()[0] != String.class;
-    }
 }

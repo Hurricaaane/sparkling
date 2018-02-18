@@ -17,10 +17,8 @@ import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,18 +29,15 @@ import java.util.Map;
  * @author Ha3
  */
 class InternalSparklingRoute implements Route {
-    private final ReflectedMethodDescriptor reflectedMethod;
-    private final List<SparklingParameter> parameters;
+    private final Map<SparklingParameter, Type> reflectedTypes;
+    private final ControllerInvoker reflectedMethod;
     private final ParameterAggregator aggregator;
     private final Modelizer modelizer;
     private final Gson gson;
-    private final boolean isImplemented;
 
-    public InternalSparklingRoute(ReflectedMethodDescriptor reflectedMethod, List<SparklingParameter> parameters, SparklingDeserializer deserializer) {
+    public InternalSparklingRoute(Map<SparklingParameter, Type> reflectedTypes, ControllerInvoker reflectedMethod, List<SparklingParameter> parameters, SparklingDeserializer deserializer) {
+        this.reflectedTypes = reflectedTypes;
         this.reflectedMethod = reflectedMethod;
-        this.parameters = parameters;
-
-        this.isImplemented = parameters.size() == reflectedMethod.getExpectedRequestParameters().size();
 
         gson = new Gson();
         aggregator = new ParameterAggregator(deserializer);
@@ -51,16 +46,11 @@ class InternalSparklingRoute implements Route {
 
     @Override
     public Object handle(Request request, Response response) throws Exception {
-        if (!isImplemented) {
-            Object returnedObject = reflectedMethod.getImplementation().apply(Collections.emptyList());
-            return applyResponse(request, response, returnedObject);
-        }
-
         String contentType = request.contentType();
 
-        List<Object> models = extractModels(request, response);
+        Map<SparklingParameter, Object> models = extractModels(request);
 
-        Object returnedObject = reflectedMethod.getImplementation().apply(models);
+        Object returnedObject = reflectedMethod.submit(request, response, models);
 
         return applyResponse(request, response, returnedObject);
     }
@@ -132,7 +122,7 @@ class InternalSparklingRoute implements Route {
         }
     }
 
-    private List<Object> extractModels(Request request, Response response) {
+    private Map<SparklingParameter, Object> extractModels(Request request) {
         FormType formType = resolveFormType(request);
 
         Collection<Part> parts = null;
@@ -140,21 +130,16 @@ class InternalSparklingRoute implements Route {
             parts = extractParts(request);
         }
 
-        List<Object> models = new ArrayList<>();
-        models.add(request);
-        models.add(response);
-
-        Iterator<SparklingParameter> parameterIterator = parameters.iterator();
-        Iterator<Type> reflectedIterator = reflectedMethod.getExpectedRequestParameters().iterator();
-        while (parameterIterator.hasNext()) {
-            SparklingParameter sparklingParameter = parameterIterator.next();
-            Type reflectedType = reflectedIterator.next();
+        Map<SparklingParameter, Object> models = new LinkedHashMap<>();
+        for (Map.Entry<SparklingParameter, Type> reflectedTypeEntry : reflectedTypes.entrySet()) {
+            SparklingParameter sparklingParameter = reflectedTypeEntry.getKey();
 
             Object value = aggregator.aggregateParameter(request, sparklingParameter, formType, parts);
-            Object model = modelizer.modelize(value, reflectedType);
+            Object model = modelizer.modelize(value, reflectedTypeEntry.getValue());
 
-            models.add(model);
+            models.put(sparklingParameter, model);
         }
+
         return models;
     }
 

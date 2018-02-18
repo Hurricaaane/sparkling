@@ -4,6 +4,8 @@ import eu.ha3.openapi.sparkling.enums.DeserializeInto;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.enums.ParameterLocation;
 
+import java.util.Objects;
+
 /**
  * (Default template)
  * Created on 2017-09-23
@@ -43,5 +45,38 @@ public class SparklingParameter {
 
     public SparklingRequirement getRequirement() {
         return requirement;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SparklingParameter that = (SparklingParameter) o;
+        return Objects.equals(name, that.name) &&
+                location == that.location &&
+                arrayType == that.arrayType &&
+                type == that.type &&
+                requirement == that.requirement;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, location, arrayType, type, requirement);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("SparklingParameter{");
+        sb.append("name='").append(name).append('\'');
+        sb.append(", location=").append(location);
+        sb.append(", arrayType=").append(arrayType);
+        sb.append(", type=").append(type);
+        sb.append(", requirement=").append(requirement);
+        sb.append('}');
+        return sb.toString();
     }
 }
