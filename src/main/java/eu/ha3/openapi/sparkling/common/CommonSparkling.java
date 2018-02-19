@@ -39,7 +39,7 @@ public class CommonSparkling implements Sparkling {
         ControllerInvoker descriptor = implementationMatcher.resolveControllerImplementation(routeDefinition.getActionName(), routeDefinition.getTag(), routeDefinition.getParameters());
 
         InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getReflectedTypeMap(), descriptor, routeDefinition.getParameters(), deserializer);
-        addRouteToSpark(routeDefinition.getPost(), routeDefinition.getSparkPath(), route);
+        addRouteToSpark(routeDefinition.getVerb(), routeDefinition.getSparkPath(), route);
     }
 
     private void addRouteToSpark(SparklingVerb method, String sparkPath, InternalSparklingRoute route) {
