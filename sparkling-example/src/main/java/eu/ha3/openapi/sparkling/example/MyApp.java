@@ -28,7 +28,7 @@ public class MyApp implements SparkApplication {
     @Override
     public void init() {
         try {
-            tryInit();
+            tryInit("some default string");
 
         } catch (RuntimeException e) {
             e.printStackTrace();
@@ -36,14 +36,14 @@ public class MyApp implements SparkApplication {
         }
     }
 
-    private void tryInit() {
+    private void tryInit(String defaultString) {
         Spark.options("*", (request, response) -> "");
         Spark.before((request, response) -> {
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Request-Method", "*");
             response.header("Access-Control-Allow-Headers", "Content-Type,*");
         });
-        List<?> implementations = Arrays.asList(new PetController(), new StoreController());
+        List<?> implementations = Arrays.asList(new PetController(defaultString), new StoreController());
         Sparkling sparkling = Sparkling.setup(implementations);
 
         try (InputStream openApiStream = Files.newInputStream(pathFromResource("petstore.json"))) {

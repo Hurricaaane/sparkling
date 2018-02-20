@@ -21,6 +21,12 @@ import java.util.Map;
  * @author Ha3
  */
 public class PetController {
+    private final String someDefaultInjectableString;
+
+    public PetController(String someDefaultInjectableString) {
+        this.someDefaultInjectableString = someDefaultInjectableString;
+    }
+
     public Pet addPet(Question<BodyPetRequest> question) {
         return question.getData().body;
     }
@@ -30,7 +36,7 @@ public class PetController {
     }
 
     public List<Pet> findPetsByStatus(Question<FindPetsByStatusRequest> question) {
-        return Arrays.asList(new Pet(0, new Category(0, "string"), "string", Arrays.asList("string"), Arrays.asList(new Tag(0, "string")), "string"));
+        return Arrays.asList(new Pet(0, new Category(0, someDefaultInjectableString), someDefaultInjectableString, Arrays.asList(someDefaultInjectableString), Arrays.asList(new Tag(0, someDefaultInjectableString)), someDefaultInjectableString));
     }
 
     public Map<String, Object> uploadFile(Question<UploadFileRequest> question) {
