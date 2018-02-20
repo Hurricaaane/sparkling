@@ -1,5 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
+import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
 import eu.ha3.openapi.sparkling.vo.Question;
@@ -27,12 +28,14 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 class ImplementationMatcher {
-    static final int FIRST_PARAMETER_INDEX = 2;
+    private static final int FIRST_PARAMETER_INDEX = 2;
 
     private final List<?> controllers;
+    private final Gson gson;
 
-    public ImplementationMatcher(List<?> controllers) {
+    public ImplementationMatcher(List<?> controllers, Gson gson) {
         this.controllers = controllers;
+        this.gson = gson;
     }
 
     public ControllerInvoker resolveControllerImplementation(String operationId, String controllerHint, List<SparklingParameter> parameters) {
@@ -141,7 +144,7 @@ class ImplementationMatcher {
 
         System.out.println("    OK: Resolving question " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + reflectedTypes);
 
-        return new QuestionControllerInvoker(operationId, controller, method, parameters, reflectedTypes, dataType);
+        return new QuestionControllerInvoker(operationId, controller, method, parameters, reflectedTypes, dataType, gson);
     }
 
     private ControllerInvoker withOrderedMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {

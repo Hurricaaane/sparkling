@@ -1,7 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
 import com.google.gson.Gson;
-import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -24,10 +23,10 @@ class InternalSparklingRoute implements Route {
     private final Gson gson;
     private final ModelExtractor modelExtractor;
 
-    public InternalSparklingRoute(Map<SparklingParameter, Type> reflectedTypes, ControllerInvoker reflectedMethod, SparklingDeserializer deserializer) {
-        gson = new Gson();
-        modelExtractor = new ModelExtractor(deserializer, gson, reflectedTypes);
+    public InternalSparklingRoute(Map<SparklingParameter, Type> reflectedTypes, ControllerInvoker reflectedMethod, Gson gson, ParameterAggregator aggregator, Modelizer modelizer) {
+        modelExtractor = new ModelExtractor(reflectedTypes, aggregator, modelizer);
 
+        this.gson = gson;
         this.reflectedMethod = reflectedMethod;
     }
 

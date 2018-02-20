@@ -35,7 +35,7 @@ public class Modelizer {
     private Object modelizeStringSource(Object item, Type reflectedType) {
         if (item instanceof String && reflectedType != String.class) {
             // reflectedType can be either a model, or a list of models, it will work the same
-            return new Gson().fromJson((String) item, reflectedType);
+            return gson.fromJson((String) item, reflectedType);
 
         } else {
             return item;

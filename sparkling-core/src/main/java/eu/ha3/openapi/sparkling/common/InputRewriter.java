@@ -17,6 +17,7 @@ import java.util.stream.IntStream;
  *
  * @author Ha3
  */
+@Deprecated
 public class InputRewriter {
     // FIXME: What was the point of this? Isn't this already achieved in the Modelizer ?
     public static List<Object> rewriteAllInputsToBeCloserToMethodTypes(List<Object> inputs, List<Type> reflectedTypes, List<SparklingParameter> parameters) {

@@ -1,8 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.exception.TransformationFailedInternalSparklingException;
-import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
 
@@ -29,11 +27,10 @@ public class ModelExtractor {
     private final ParameterAggregator aggregator;
     private final Modelizer modelizer;
 
-    public ModelExtractor(SparklingDeserializer deserializer, Gson gson, Map<SparklingParameter, Type> reflectedTypes) {
+    public ModelExtractor(Map<SparklingParameter, Type> reflectedTypes, ParameterAggregator aggregator, Modelizer modelizer) {
         this.reflectedTypes = reflectedTypes;
-
-        aggregator = new ParameterAggregator(deserializer);
-        modelizer = new Modelizer(gson);
+        this.aggregator = aggregator;
+        this.modelizer = modelizer;
     }
 
     public Map<SparklingParameter, Object> extractModels(Request request) {

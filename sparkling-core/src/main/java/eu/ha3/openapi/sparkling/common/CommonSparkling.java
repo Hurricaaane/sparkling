@@ -1,9 +1,9 @@
 package eu.ha3.openapi.sparkling.common;
 
+import com.google.gson.Gson;
 import eu.ha3.openapi.sparkling.enums.SparklingVerb;
 import eu.ha3.openapi.sparkling.routing.RouteDefinition;
 import eu.ha3.openapi.sparkling.routing.Sparkling;
-import eu.ha3.openapi.sparkling.routing.SparklingDeserializer;
 import spark.Service;
 import spark.Spark;
 
@@ -17,28 +17,33 @@ import java.util.List;
  */
 public class CommonSparkling implements Sparkling {
     private final Service http;
-    private final SparklingDeserializer deserializer;
+    private final Gson gson;
     private final ImplementationMatcher implementationMatcher;
+    private final ParameterAggregator aggregator;
+    private final Modelizer modelizer;
 
-    public CommonSparkling(Service http, SparklingDeserializer deserializer, List<?> controllers) {
+    public CommonSparkling(Service http, List<?> controllers) {
         this.http = http;
-        this.deserializer = deserializer;
-        implementationMatcher = new ImplementationMatcher(controllers);
+
+        gson = new Gson();
+        implementationMatcher = new ImplementationMatcher(controllers, gson);
+        this.aggregator = new ParameterAggregator(new CommonDeserializer());
+        this.modelizer = new Modelizer(gson);
     }
 
     public static CommonSparkling setup(Service http, List<?> controllers) {
-        return new CommonSparkling(http, new CommonDeserializer(), controllers);
+        return new CommonSparkling(http, controllers);
     }
 
     public static CommonSparkling setup(List<?> controllers) {
-        return new CommonSparkling(null, new CommonDeserializer(), controllers);
+        return new CommonSparkling(null, controllers);
     }
 
     @Override
     public void newRoute(RouteDefinition routeDefinition) {
         ControllerInvoker descriptor = implementationMatcher.resolveControllerImplementation(routeDefinition.getActionName(), routeDefinition.getTag(), routeDefinition.getParameters());
 
-        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getReflectedTypeMap(), descriptor, deserializer);
+        InternalSparklingRoute route = new InternalSparklingRoute(descriptor.getReflectedTypeMap(), descriptor, gson, aggregator, modelizer);
         addRouteToSpark(routeDefinition.getVerb(), routeDefinition.getSparkPath(), route);
     }
 

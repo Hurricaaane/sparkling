@@ -31,13 +31,15 @@ class QuestionControllerInvoker implements ControllerInvoker {
     private final Map<SparklingParameter, Type> reflectedTypes;
     private final Type dataType;
     private final Map<SparklingParameter, Field> reflectedFields;
+    private final Gson gson;
 
-    public QuestionControllerInvoker(String operationId, Object controller, Method method, List<SparklingParameter> parameters, Map<SparklingParameter, Type> reflectedTypes, Type dataType) {
+    public QuestionControllerInvoker(String operationId, Object controller, Method method, List<SparklingParameter> parameters, Map<SparklingParameter, Type> reflectedTypes, Type dataType, Gson gson) {
         this.operationId = operationId;
         this.controller = controller;
         this.method = method;
         this.reflectedTypes = reflectedTypes;
         this.dataType = dataType;
+        this.gson = gson;
 
         TypeToken<?> typeToken = TypeToken.get(dataType);
         Class<?> rawType = typeToken.getRawType();
@@ -76,7 +78,7 @@ class QuestionControllerInvoker implements ControllerInvoker {
 
     private Object convertInputsToDataType(Map<SparklingParameter, Object> models) {
         try {
-            Object dataObject = new Gson().fromJson("{}", dataType);
+            Object dataObject = gson.fromJson("{}", dataType);
 
             for (Map.Entry<SparklingParameter, Object> model : models.entrySet()) {
                 reflectedFields.get(model.getKey()).set(dataObject, model.getValue());
