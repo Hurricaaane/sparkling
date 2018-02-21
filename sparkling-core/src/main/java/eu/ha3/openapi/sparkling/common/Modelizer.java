@@ -1,6 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
+import eu.ha3.openapi.sparkling.routing.RequestConverter;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -14,10 +14,10 @@ import java.util.stream.Collectors;
  * @author Ha3
  */
 public class Modelizer {
-    private final Gson gson;
+    private final RequestConverter requestConverter;
 
-    public Modelizer(Gson gson) {
-        this.gson = gson;
+    public Modelizer(RequestConverter requestConverter) {
+        this.requestConverter = requestConverter;
     }
 
     Object modelize(Object item, Type reflectedType) {
@@ -33,12 +33,16 @@ public class Modelizer {
     }
 
     private Object modelizeStringSource(Object item, Type reflectedType) {
-        if (item instanceof String && reflectedType != String.class) {
-            // reflectedType can be either a model, or a list of models, it will work the same
-            return gson.fromJson((String) item, reflectedType);
+        try {
+            if (item instanceof String && reflectedType != String.class) {
+                // reflectedType can be either a model, or a list of models, it will work the same
+                return requestConverter.convertRequest((String) item, reflectedType);
 
-        } else {
-            return item;
+            } else {
+                return item;
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -48,7 +52,13 @@ public class Modelizer {
                 && reflectedType instanceof ParameterizedType
                 && ((ParameterizedType)reflectedType).getActualTypeArguments()[0] != String.class) {
             return ((List<String>) item).stream()
-                            .map(o -> gson.fromJson((String) o, reflectedType))
+                            .map(o -> {
+                                try {
+                                    return requestConverter.convertRequest((String) o, reflectedType);
+                                } catch (Exception e) {
+                                    throw new IllegalStateException(e);
+                                }
+                            })
                             .collect(Collectors.toList());
 
         } else {

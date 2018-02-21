@@ -1,7 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import eu.ha3.openapi.sparkling.routing.RequestConverter;
 import eu.ha3.openapi.sparkling.exception.DeclareSparklingException;
 import eu.ha3.openapi.sparkling.exception.UnavailableControllerSparklingException;
 import eu.ha3.openapi.sparkling.vo.Question;
@@ -12,6 +11,7 @@ import spark.Response;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
@@ -31,18 +31,17 @@ class QuestionControllerInvoker implements ControllerInvoker {
     private final Map<SparklingParameter, Type> reflectedTypes;
     private final Type dataType;
     private final Map<SparklingParameter, Field> reflectedFields;
-    private final Gson gson;
+    private final RequestConverter requestConverter;
 
-    public QuestionControllerInvoker(String operationId, Object controller, Method method, List<SparklingParameter> parameters, Map<SparklingParameter, Type> reflectedTypes, Type dataType, Gson gson) {
+    public QuestionControllerInvoker(String operationId, Object controller, Method method, List<SparklingParameter> parameters, Map<SparklingParameter, Type> reflectedTypes, Type dataType, RequestConverter requestConverter) {
         this.operationId = operationId;
         this.controller = controller;
         this.method = method;
         this.reflectedTypes = reflectedTypes;
         this.dataType = dataType;
-        this.gson = gson;
+        this.requestConverter = requestConverter;
 
-        TypeToken<?> typeToken = TypeToken.get(dataType);
-        Class<?> rawType = typeToken.getRawType();
+        Class<?> rawType = (Class<?>) ((ParameterizedType) dataType).getRawType();
 
         Field[] declaredFields = rawType.getDeclaredFields();
         for (Field declaredField : declaredFields) {
@@ -78,7 +77,7 @@ class QuestionControllerInvoker implements ControllerInvoker {
 
     private Object convertInputsToDataType(Map<SparklingParameter, Object> models) {
         try {
-            Object dataObject = gson.fromJson("{}", dataType);
+            Object dataObject = requestConverter.convertRequest("{}", dataType);
 
             for (Map.Entry<SparklingParameter, Object> model : models.entrySet()) {
                 reflectedFields.get(model.getKey()).set(dataObject, model.getValue());
@@ -86,7 +85,7 @@ class QuestionControllerInvoker implements ControllerInvoker {
 
             return dataObject;
 
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }

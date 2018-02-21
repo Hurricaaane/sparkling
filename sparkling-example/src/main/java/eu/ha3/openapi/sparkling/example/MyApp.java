@@ -43,6 +43,7 @@ public class MyApp implements SparkApplication {
             response.header("Access-Control-Request-Method", "*");
             response.header("Access-Control-Allow-Headers", "Content-Type,*");
         });
+
         List<?> implementations = Arrays.asList(new PetController(defaultString), new StoreController());
         Sparkling sparkling = Sparkling.setup(implementations);
 

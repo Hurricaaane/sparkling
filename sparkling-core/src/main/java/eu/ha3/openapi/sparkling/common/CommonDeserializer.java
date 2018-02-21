@@ -66,7 +66,7 @@ public class CommonDeserializer implements SparklingDeserializer {
 
     @Override
     public List<Object> deserializeMultiValued(DeserializeInto type, ArrayType arrayType, String content) {
-        return handleArrayTypeAsStream(type, arrayType, content)
+        return handleArrayTypeAsStream(arrayType, content)
                 .map(s -> deserializeSingleValued(type, content))
                 .collect(Collectors.toList());
     }
@@ -95,7 +95,7 @@ public class CommonDeserializer implements SparklingDeserializer {
         }
     }
 
-    private Stream<String> handleArrayTypeAsStream(DeserializeInto type, ArrayType arrayType, String content) {
+    private Stream<String> handleArrayTypeAsStream(ArrayType arrayType, String content) {
         Stream<String> stream;
         if (arrayType == ArrayType.NONE) {
             stream = Stream.of(content);

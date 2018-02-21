@@ -1,6 +1,6 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
+import eu.ha3.openapi.sparkling.routing.ResponseConverter;
 import eu.ha3.openapi.sparkling.routing.SparklingResponseContext;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -20,13 +20,13 @@ import java.util.Map;
  */
 class InternalSparklingRoute implements Route {
     private final ControllerInvoker reflectedMethod;
-    private final Gson gson;
+    private final ResponseConverter responseConverter;
     private final ModelExtractor modelExtractor;
 
-    public InternalSparklingRoute(Map<SparklingParameter, Type> reflectedTypes, ControllerInvoker reflectedMethod, Gson gson, ParameterAggregator aggregator, Modelizer modelizer) {
+    public InternalSparklingRoute(Map<SparklingParameter, Type> reflectedTypes, ControllerInvoker reflectedMethod, ResponseConverter responseConverter, ParameterAggregator aggregator, Modelizer modelizer) {
         modelExtractor = new ModelExtractor(reflectedTypes, aggregator, modelizer);
 
-        this.gson = gson;
+        this.responseConverter = responseConverter;
         this.reflectedMethod = reflectedMethod;
     }
 
@@ -64,20 +64,24 @@ class InternalSparklingRoute implements Route {
             return returnedObject;
 
         } else {
-            // FIXME: Transform response
-            String acceptHeader = request.headers("Accept");
-            if (acceptHeader == null || "application/json".equals(acceptHeader)) {
-                if (response.type() == null) {
-                    response.type("application/json");
-                }
-                return gson.toJson(returnedObject);
+            try {
+                // FIXME: Transform response
+                String acceptHeader = request.headers("Accept");
+                if (acceptHeader == null || "application/json".equals(acceptHeader)) {
+                    if (response.type() == null) {
+                        response.type("application/json");
+                    }
+                    return responseConverter.convertResponse(returnedObject);
 
-            } else {
-                // FIXME: How to handle other formats than JSON
-                if (response.type() == null) {
-                    response.type("application/json");
+                } else {
+                    // FIXME: How to handle other formats than JSON
+                    if (response.type() == null) {
+                        response.type("application/json");
+                    }
+                    return responseConverter.convertResponse(returnedObject);
                 }
-                return gson.toJson(returnedObject);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
             }
         }
     }

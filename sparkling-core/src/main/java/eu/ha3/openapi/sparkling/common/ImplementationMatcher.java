@@ -1,8 +1,7 @@
 package eu.ha3.openapi.sparkling.common;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import eu.ha3.openapi.sparkling.enums.ArrayType;
+import eu.ha3.openapi.sparkling.routing.RequestConverter;
 import eu.ha3.openapi.sparkling.vo.Question;
 import eu.ha3.openapi.sparkling.vo.SparklingParameter;
 import spark.Request;
@@ -31,11 +30,11 @@ class ImplementationMatcher {
     private static final int FIRST_PARAMETER_INDEX = 2;
 
     private final List<?> controllers;
-    private final Gson gson;
+    private final RequestConverter requestConverter;
 
-    public ImplementationMatcher(List<?> controllers, Gson gson) {
+    public ImplementationMatcher(List<?> controllers, RequestConverter requestConverter) {
         this.controllers = controllers;
-        this.gson = gson;
+        this.requestConverter = requestConverter;
     }
 
     public ControllerInvoker resolveControllerImplementation(String operationId, String controllerHint, List<SparklingParameter> parameters) {
@@ -115,8 +114,7 @@ class ImplementationMatcher {
         ParameterizedType type = (ParameterizedType) methodTypes.get(0);
         Type dataType = type.getActualTypeArguments()[0];
 
-        TypeToken<?> questionType = TypeToken.get(dataType);
-        Class<?> rawQuestionType = questionType.getRawType();
+        Class<?> rawQuestionType = (Class<?>) ((ParameterizedType) dataType).getRawType();
 
         Field[] declaredFields = rawQuestionType.getDeclaredFields();
 
@@ -144,7 +142,7 @@ class ImplementationMatcher {
 
         System.out.println("    OK: Resolving question " + controller.getClass().getSimpleName() + "." + method.getName() + "(" + Arrays.stream(method.getParameters()).map(parameter -> parameter.getType().getSimpleName()).collect(Collectors.joining(", ")) + ") with parameters: " + reflectedTypes);
 
-        return new QuestionControllerInvoker(operationId, controller, method, parameters, reflectedTypes, dataType, gson);
+        return new QuestionControllerInvoker(operationId, controller, method, parameters, reflectedTypes, dataType, requestConverter);
     }
 
     private ControllerInvoker withOrderedMethod(String operationId, List<SparklingParameter> parameters, Object controller, Method method) {
@@ -179,16 +177,13 @@ class ImplementationMatcher {
     }
 
     private List<Type> resolveQuestionRuntimeTypes(Method method) {
-        List<Type> types = Arrays.asList(method.getGenericParameterTypes());
-
-        return types;
+        return Arrays.asList(method.getGenericParameterTypes());
     }
 
     private List<Type> resolveOrderedArgumentTypes(Method method) {
         List<Type> types = Arrays.asList(method.getGenericParameterTypes());
-        List<Type> expectedTypes = new ArrayList<>(types.subList(FIRST_PARAMETER_INDEX, types.size()));
 
-        return expectedTypes;
+        return new ArrayList<>(types.subList(FIRST_PARAMETER_INDEX, types.size()));
     }
 
     private List<Method> resolveMatchingMethodsByName(String operationId, Object controller) {
